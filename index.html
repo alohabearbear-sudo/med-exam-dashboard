@@ -123,3 +123,187 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            text-align: left;
+        }
+        th {
+            background-color: #1e3a8a;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 16px;
+            font-size: 15px;
+        }
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        tr:hover {
+            background-color: #f8fafc;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+        }
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .badge-fail {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .highlight-text {
+            font-weight: bold;
+            color: #ef4444;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>醫師國考歷年分數與及格分析看板</h1>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行數據落點分析</p>
+    </header>
+
+    <div class="upload-card">
+        <div class="upload-btn-wrapper">
+            <button class="btn">選擇並上傳 .json 檔案</button>
+            <input type="file" id="file-input" accept=".json" />
+        </div>
+        <div class="upload-tip">檔案僅在您的瀏覽器本地端解析，絕不會上傳至任何伺服器，請安心使用。</div>
+    </div>
+
+    <div class="rules-card">
+        <h3>📊 計算規則與設定說明</h3>
+        <ul>
+            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 滿分共 400 分)</li>
+            <li>• 每題配分：<strong>1.25 分</strong></li>
+            <li>• <strong>醫學 5 設定：</strong>目前預設未作答 (0 分)，並為您精準換算出「還差幾題」即可直接跨過及格線。</li>
+        </ul>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+
+    <div class="table-container" id="table-container">
+        <table id="result-table">
+            <thead>
+                <tr>
+                    <th>年度與期別</th>
+                    <th class="text-center">醫3~醫6 答對題數</th>
+                    <th class="text-center">當前總分 (未計醫5)</th>
+                    <th class="text-center">及格狀態</th>
+                    <th class="text-center">醫學5 需補足分數</th>
+                    <th class="text-center">醫學5 還差幾題過線？</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const PASS_SCORE = 240;
+    const POINTS_PER_QUESTION = 1.25;
+
+    function formatYearTerm(code) {
+        if(code.length !== 4) return code;
+        const year = code.substring(0, 3);
+        const term = code.substring(3) === '1' ? '第一次' : '第二次';
+        return `${year}年 ${term}`;
+    }
+
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        const errorBox = document.getElementById('error-box');
+        const tableContainer = document.getElementById('table-container');
+        const tbody = document.getElementById('table-body');
+
+        // 重置狀態
+        errorBox.style.display = 'none';
+        tbody.innerHTML = '';
+
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                const stats = {};
+
+                Object.keys(data).forEach(key => {
+                    // 過濾掉 metadata 等非題目的 key
+                    if (key === 'metadata') return;
+                    
+                    const yearTerm = key.substring(0, 4);
+                    const subject = key.substring(4, 5);
+                    const result = data[key];
+                    const isCorrect = Array.isArray(result) ? result[0] : result;
+
+                    if (!stats[yearTerm]) {
+                        stats[yearTerm] = { correctCount: 0 };
+                    }
+
+                    if ((subject === '3' || subject === '4' || subject === '6') && isCorrect === 1) {
+                        stats[yearTerm].correctCount += 1;
+                    }
+                });
+
+                const sortedTerms = Object.keys(stats).sort();
+                
+                if (sortedTerms.length === 0) {
+                    throw new Error('JSON 檔案格式解析成功，但未偵測到符合國考科目編碼的答題數據。');
+                }
+
+                sortedTerms.forEach(term => {
+                    const count = stats[term].correctCount;
+                    const currentScore = count * POINTS_PER_QUESTION;
+                    const isPassed = currentScore >= PASS_SCORE;
+                    
+                    const neededScore = Math.max(0, PASS_SCORE - currentScore);
+                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${formatYearTerm(term)} (${term})</strong></td>
+                        <td class="text-center">${count} 題</td>
+                        <td class="text-center" style="font-weight: 600; color: #1e3a8a;">${currentScore.toFixed(2)} 分</td>
+                        <td class="text-center">
+                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
+                                ${isPassed ? '已過線' : '未及格'}
+                            </span>
+                        </td>
+                        <td class="text-center">${neededScore > 0 ? neededScore.toFixed(2) + ' 分' : '0.00 分'}</td>
+                        <td class="text-center ${neededQuestions > 0 ? 'highlight-text' : ''}">
+                            ${neededQuestions > 0 ? `還差 ${neededQuestions} 題` : '🎉 已過線 (0 題)'}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // 顯示結果表格
+                tableContainer.style.display = 'block';
+
+            } catch (error) {
+                console.error(error);
+                errorBox.textContent = '讀取失敗：' + error.message;
+                errorBox.style.display = 'block';
+                tableContainer.style.display = 'none';
+            }
+        };
+
+        reader.readAsText(file);
+    });
+</script>
+
+</body>
+</html>

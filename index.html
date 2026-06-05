@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>醫師國考二階 - 歷年分數與及格分析看板</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        header h1 {
+            color: #1e3a8a;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #64748b;
+            font-size: 15px;
+        }
+        .rules-card {
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        .rules-card h3 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .rules-card ul {
+            list-style-type: none;
+        }
+        .rules-card li {
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #475569;
+        }
+        .error-message {
+            background-color: #fee2e2;
+            border-left: 5px solid #ef4444;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .table-container {
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th {
+            background-color: #1e3a8a;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 16px;
+            font-size: 15px;
+        }
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        tr:hover {
+            background-color: #f8fafc;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+        }
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .badge-fail {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .highlight-text {
+            font-weight: bold;
+            color: #ef4444;
+            font-size: 16px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>醫師國考歷年分數與及格分析看板</h1>
+        <p>自動讀取 <code>new_test.json</code> 答題歷史紀錄並動態進行落點模擬分析</p>
+    </header>
+
+    <div class="rules-card">
+        <h3>📊 計算規則與設定說明</h3>
+        <ul>
+            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 滿分共 400 分)</li>
+            <li>• 每題配分：<strong>1.25 分</strong></li>
+            <li>• <strong>醫學 5 設定：</strong>目前預設未作答 (0 分)，並為您精準換算出「還差幾題」即可直接跨過及格線。</li>
+        </ul>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+
+    <div class="table-container">
+        <div id="loading-text" class="loading">正在載入並解析數據中，請稍候...</div>
+        <table id="result-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>年度與期別</th>
+                    <th class="text-center">醫3~醫6 答對題數</th>
+                    <th class="text-center">當前總分 (未計醫5)</th>
+                    <th class="text-center">及格狀態</th>
+                    <th class="text-center">醫學5 需補足分數</th>
+                    <th class="text-center">醫學5 還差幾題過線？</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 定義國考常數
+    const PASS_SCORE = 240;
+    const POINTS_PER_QUESTION = 1.25;
+
+    // 將代碼轉換為易讀的年度期別名稱
+    function formatYearTerm(code) {
+        if(code.length !== 4) return code;
+        const year = code.substring(0, 3);
+        const term = code.substring(3) === '1' ? '第一次' : '第二次';
+        return `${year}年 ${term}`;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        // 自同資料夾讀取 JSON 檔案
+        fetch('new_test.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('找不到 new_test.json 檔案，請確認檔案是否放置於與網頁相同的資料夾中。');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // 依據年度期別 (前四碼) 分組統計答對題數
+                // 考科代碼：3=醫三, 4=醫四, 6=醫六
+                const stats = {};
+
+                Object.keys(data).forEach(key => {
+                    const yearTerm = key.substring(0, 4);
+                    const subject = key.substring(4, 5);
+                    const result = data[key];
+                    // 取得答題結果 (若為陣列取第一個元素，否則直接取值)
+                    const isCorrect = Array.isArray(result) ? result[0] : result;
+
+                    if (!stats[yearTerm]) {
+                        stats[yearTerm] = { correctCount: 0 };
+                    }
+
+                    // 僅統計醫學 3、4、6 的答對題數
+                    if ((subject === '3' || subject === '4' || subject === '6') && isCorrect === 1) {
+                        stats[yearTerm].correctCount += 1;
+                    }
+                });
+
+                // 排序年度期別
+                const sortedTerms = Object.keys(stats).sort();
+                const tbody = document.getElementById('table-body');
+
+                sortedTerms.forEach(term => {
+                    const count = stats[term].correctCount;
+                    const currentScore = count * POINTS_PER_QUESTION;
+                    const isPassed = currentScore >= PASS_SCORE;
+                    
+                    // 計算醫學 5 差距
+                    const neededScore = Math.max(0, PASS_SCORE - currentScore);
+                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
+
+                    // 建立表格欄位
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td><strong>${formatYearTerm(term)} (${term})</strong></td>
+                        <td class="text-center">${count} 題</td>
+                        <td class="text-center" style="font-weight: 600; color: #1e3a8a;">${currentScore.toFixed(2)} 分</td>
+                        <td class="text-center">
+                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
+                                ${isPassed ? '已過線' : '未及格'}
+                            </span>
+                        </td>
+                        <td class="text-center">${neededScore > 0 ? neededScore.toFixed(2) + ' 分' : '0.00 分'}</td>
+                        <td class="text-center ${neededQuestions > 0 ? 'highlight-text' : ''}">
+                            ${neededQuestions > 0 ? `還差 ${neededQuestions} 題` : '🎉 已過線 (0 題)'}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // 隱藏 Loading 顯示表格
+                document.getElementById('loading-text').style.display = 'none';
+                document.getElementById('result-table').style.display = 'table';
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('loading-text').style.display = 'none';
+                const errorBox = document.getElementById('error-box');
+                errorBox.textContent = error.message;
+                errorBox.style.display = 'block';
+            });
+    });
+</script>
+
+</body>
+</html>

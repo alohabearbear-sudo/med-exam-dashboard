@@ -50,16 +50,6 @@
             border-color: #1d4ed8;
             background-color: #eff6ff;
         }
-        
-        /* 新增：按鈕置中並排群組 */
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
-        
         .upload-btn-wrapper {
             position: relative;
             overflow: hidden;
@@ -76,10 +66,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
         }
         .btn:hover {
             background-color: #1d4ed8;
@@ -93,17 +79,6 @@
             opacity: 0;
             cursor: pointer;
         }
-        
-        /* 新增：國考傳送門專用綠色樣式 */
-        .btn-portal {
-            background-color: #10b981;
-            border-color: #10b981;
-        }
-        .btn-portal:hover {
-            background-color: #059669;
-            border-color: #059669;
-        }
-        
         .upload-tip {
             margin-top: 10px;
             font-size: 13px;
@@ -218,7 +193,7 @@
         .gap-highlight {
             font-weight: bold;
             color: #ef4444;
-            background-color: #fff5f5;
+            background-color: #fff5f5; /* 淡淡紅底提示差距 */
         }
         .gap-score {
             font-size: 11px;
@@ -234,18 +209,13 @@
 <div class="container">
     <header>
         <h1>醫師國考歷年分數與及格分析看板</h1>
-        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析</p>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析 | <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" style="color: #10b981; font-weight: 600; text-decoration: underline;">👉 前往國考傳送門</a></p>
     </header>
 
     <div class="upload-card">
-        <div class="btn-group">
-            <div class="upload-btn-wrapper">
-                <button class="btn">選擇並上傳 .json 檔案</button>
-                <input type="file" id="file-input" accept=".json" />
-            </div>
-            <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" class="btn btn-portal">
-                📝 國考傳送門 ↗
-            </a>
+        <div class="upload-btn-wrapper">
+            <button class="btn">選擇並上傳 .json 檔案</button>
+            <input type="file" id="file-input" accept=".json" />
         </div>
         <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動重新整理網頁。</div>
     </div>
@@ -294,8 +264,4 @@
     }
 
     document.getElementById('file-input').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        const errorBox = document.getElementById('error-box');
+        const

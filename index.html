@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>醫師國考二階 - 歷年分數與及格分析看板</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1450px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+            display: block !important;
+        }
+        header h1 {
+            color: #1e3a8a;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #64748b;
+            font-size: 15px;
+        }
+        
+        /* 上傳區塊樣式 */
+        .upload-card {
+            background: #ffffff;
+            border: 2px dashed #3b82f6;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+        }
+        .upload-card:hover {
+            border-color: #1d4ed8;
+            background-color: #eff6ff;
+        }
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .btn {
+            border: 2px solid #3b82f6;
+            color: #ffffff;
+            background-color: #3b82f6;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .upload-tip {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .rules-card {
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        .rules-card h3 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .rules-card ul {
+            list-style-type: none;
+        }
+        .rules-card li {
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #475569;
+        }
+        .error-message {
+            background-color: #fee2e2;
+            border-left: 5px solid #ef4444;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .table-container {
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #1e3a8a !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            padding: 16px 10px;
+            font-size: 14px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        th:first-child {
+            text-align: left;
+            padding-left: 16px;
+        }
+        
+        td {
+            padding: 14px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13.5px;
+            text-align: center;
+        }
+        td:first-child {
+            text-align: left;
+            padding-left: 16px;
+        }
+        tr:hover {
+            background-color: #f8fafc;
+        }
+        
+        td.sub-col {
+            background-color: #f8fafc;
+        }
+        .sub-score {
+            font-size: 11px;
+            color: #64748b;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .total-highlight {
+            font-weight: 600;
+            background-color: #f0fdf4;
+        }
+        .clinical-highlight {
+            font-weight: 500;
+            background-color: #eff6ff;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+        }
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .badge-fail {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .gap-highlight {
+            font-weight: bold;
+            color: #ef4444;
+            background-color: #fff5f5;
+        }
+        .gap-score {
+            font-size: 11px;
+            color: #b91c1c;
+            display: block;
+            margin-top: 2px;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>醫師國考歷年分數與及格分析看板</h1>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析 | <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" style="color: #10b981; font-weight: 600; text-decoration: underline;">👉 前往國考傳送門</a></p>
+    </header>
+
+    <div class="upload-card">
+        <div class="upload-btn-wrapper">
+            <button class="btn">選擇並上傳 .json 檔案</button>
+            <input type="file" id="file-input" accept=".json" />
+        </div>
+        <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動重新整理網頁。</div>
+    </div>
+
+    <div class="rules-card">
+        <h3>📊 計算規則與設定說明</h3>
+        <ul>
+            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
+            <li>• 每題配分：<strong>1.25 分</strong></li>
+            <li>• <strong>精確對照：</strong>醫學 5 差距題數改為直接與「不含醫 5 的臨床基本盤總分」做比較，完美回饋備考進度。</li>
+        </ul>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+
+    <div class="table-container" id="table-container">
+        <table id="result-table">
+            <thead>
+                <tr>
+                    <th>年度與期別</th>
+                    <th>醫學 3</th>
+                    <th>醫學 4</th>
+                    <th>醫學 5</th>
+                    <th>醫學 6</th>
+                    <th>總題數(總分)</th>
+                    <th>總題數(總分)-不含醫5</th>
+                    <th>及格狀態</th>
+                    <th>及格狀態(不含醫5)</th>
+                    <th>醫學5 還差幾題？(需補足分數)</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const PASS_SCORE = 240;
+    const POINTS_PER_QUESTION = 1.25;
+
+    function formatYearTerm(code) {
+        if(code.length !== 4) return code;
+        const year = code.substring(0, 3);
+        const term = code.substring(3) === '1' ? '第一次' : '第二次';
+        return `${year}年 ${term}`;
+    }
+
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        const errorBox = document.getElementById('error-box');
+        const tableContainer = document.getElementById('table-container');
+        const tbody = document.getElementById('table-body');
+
+        errorBox.style.display = 'none';
+        tableContainer.style.display = 'none';
+        tbody.innerHTML = '';
+
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                const stats = {};
+
+                Object.keys(data).forEach(key => {
+                    if (key === 'metadata') return;
+                    
+                    const yearTerm = key.substring(0, 4);
+                    const subject = key.substring(4, 5);
+                    const result = data[key];
+                    const isCorrect = Array.isArray(result) ? result[0] : result;
+
+                    if (!stats[yearTerm]) {
+                        stats[yearTerm] = { '3': 0, '4': 0, '5': 0, '6': 0 };
+                    }
+
+                    if (['3', '4', '5', '6'].includes(subject) && isCorrect === 1) {
+                        stats[yearTerm][subject] += 1;
+                    }
+                });
+
+                const sortedTerms = Object.keys(stats).sort();
+                
+                if (sortedTerms.length === 0) {
+                    throw new Error('JSON 檔案格式解析成功，但未偵測到符合國考科目編碼的答題數據。');
+                }
+
+                sortedTerms.forEach(term => {
+                    const m3 = stats[term]['3'] || 0;
+                    const m4 = stats[term]['4'] || 0;
+                    const m5 = stats[term]['5'] || 0;
+                    const m6 = stats[term]['6'] || 0;
+                    
+                    // 1. 全科目大加總（含醫5）
+                    const totalCount = m3 + m4 + m5 + m6;
+                    const currentScore = totalCount * POINTS_PER_QUESTION;
+                    const isPassed = currentScore >= PASS_SCORE;
+                    
+                    // 2. 純臨床基本盤（不含醫5）
+                    const clinicalCount = m3 + m4 + m6;
+                    const clinicalScore = clinicalCount * POINTS_PER_QUESTION;
+                    const isClinicalPassed = clinicalScore >= PASS_SCORE;
+                    
+                    // 3. 【核心修正】醫學 5 差距改為與臨床基本盤 (clinicalScore) 比對
+                    const neededScore = Math.max(0, PASS_SCORE - clinicalScore);
+                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${formatYearTerm(term)}</strong></td>
+                        <td class="sub-col">${m3} 題<span class="sub-score">(${(m3*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col">${m4} 題<span class="sub-score">(${(m4*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col" style="${m5 > 0 ? 'font-weight:bold; color:#059669;' : ''}">${m5} 題<span class="sub-score">(${(m5*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col">${m6} 題<span class="sub-score">(${(m6*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        
+                        <td class="total-highlight">${totalCount} 題<span class="sub-score" style="color: #1e3a8a; font-weight: 600;">(${currentScore.toFixed(2)}分)</span></td>
+                        <td class="clinical-highlight">${clinicalCount} 題<span class="sub-score" style="color: #4b5563;">(${clinicalScore.toFixed(2)}分)</span></td>
+                        
+                        <td>
+                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
+                                ${isPassed ? '已過線' : '未及格'}
+                            </span>
+                        </td>
+                        
+                        <td>
+                            <span class="badge ${isClinicalPassed ? 'badge-success' : 'badge-fail'}">
+                                ${isClinicalPassed ? '已過線' : '未及格'}
+                            </span>
+                        </td>
+                        
+                        <td class="${neededQuestions > 0 ? 'gap-highlight' : ''}">
+                            ${neededQuestions > 0 ? `還差 ${neededQuestions} 題 <span class="gap-score">(需補足 ${neededScore.toFixed(2)} 分)</span>` : '🎉 已過線 (0 題)'}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                tableContainer.style.display = 'block';
+
+            } catch (error) {
+                console.error(error);
+                errorBox.textContent = '讀取失敗：' + error.message;
+                errorBox.style.display = 'block';
+                tableContainer.style.display = 'none';
+            }
+        };
+
+        reader.readAsText(file);
+    });
+</script>
+
+</body>
+</html>

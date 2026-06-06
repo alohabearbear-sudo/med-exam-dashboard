@@ -17,7 +17,7 @@
             padding: 40px 20px;
         }
         .container {
-            max-width: 1400px; /* 稍微拓寬容器以容納新加入的統計欄位 */
+            max-width: 1450px; /* 加寬容器，確保所有新舊對照欄位完美排開不擠壓 */
             margin: 0 auto;
         }
         header {
@@ -75,7 +75,7 @@
             font-size: 100px;
             position: absolute;
             left: 0;
- Top: 0;
+            top: 0;
             opacity: 0;
             cursor: pointer;
         }
@@ -127,7 +127,7 @@
             text-align: left;
         }
         
-        /* 統一整條表頭樣式為深藍底、白字 */
+        /* 統一整條表頭樣式為深藍底、白字，強制覆蓋所有舊樣式 */
         th {
             background-color: #1e3a8a !important;
             color: #ffffff !important;
@@ -135,6 +135,7 @@
             padding: 16px 10px;
             font-size: 14px;
             text-align: center;
+            white-space: nowrap;
         }
         th:first-child {
             text-align: left;
@@ -166,14 +167,14 @@
             margin-top: 2px;
         }
 
-        /* 統計加總欄位微調醒目底色 */
+        /* 統計加總欄位微調醒目底色，強化視覺對照 */
         .total-highlight {
             font-weight: 600;
-            background-color: #f0fdf4; /* 淡淡的綠底提示總分 */
+            background-color: #f0fdf4; /* 淡淡綠底提示：包含醫5總分 */
         }
         .clinical-highlight {
             font-weight: 500;
-            background-color: #f8fafc;
+            background-color: #eff6ff; /* 淡淡藍底提示：純臨床大科基本盤 */
         }
 
         .badge {
@@ -204,7 +205,7 @@
 <div class="container">
     <header>
         <h1>醫師國考歷年分數與及格分析看板</h1>
-        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析</p>
+        <p>上傳您的答題紀錄 JSON 檔案，網頁將自動即時刷新分科數據與落點表格</p>
     </header>
 
     <div class="upload-card">
@@ -212,7 +213,7 @@
             <button class="btn">選擇並上傳 .json 檔案</button>
             <input type="file" id="file-input" accept=".json" />
         </div>
-        <div class="upload-tip">檔案僅在您的瀏覽器本地端解析，絕不會上傳至任何伺服器，請安心使用。</div>
+        <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動整理網頁。</div>
     </div>
 
     <div class="rules-card">
@@ -220,7 +221,7 @@
         <ul>
             <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>欄位拆分：</strong>特別拆出「總題數(總分)」與「總題數(總分)-不含醫5」，方便評估臨床科目基本盤。</li>
+            <li>• <strong>新版調整：</strong>右側已獨立區分出「總題數(總分)」與「總題數(總分)-不含醫5」兩大欄位。</li>
         </ul>
     </div>
 
@@ -268,7 +269,9 @@
         const tableContainer = document.getElementById('table-container');
         const tbody = document.getElementById('table-body');
 
+        // 清空舊表格內容並隱藏，強制觸核重新渲染
         errorBox.style.display = 'none';
+        tableContainer.style.display = 'none';
         tbody.innerHTML = '';
 
         reader.onload = function(event) {
@@ -305,16 +308,16 @@
                     const m5 = stats[term]['5'] || 0;
                     const m6 = stats[term]['6'] || 0;
                     
-                    // 1. 總題數(總分) - 包含醫5
+                    // 1. 總題數(總分) - 包含醫學 5
                     const totalCount = m3 + m4 + m5 + m6;
                     const currentScore = totalCount * POINTS_PER_QUESTION;
                     const isPassed = currentScore >= PASS_SCORE;
                     
-                    // 2. 總題數(總分) - 不含醫5
+                    // 2. 總題數(總分) - 不含醫學 5
                     const clinicalCount = m3 + m4 + m6;
                     const clinicalScore = clinicalCount * POINTS_PER_QUESTION;
                     
-                    // 3. 醫學5 差距計算
+                    // 3. 醫學 5 差距計算
                     const neededScore = Math.max(0, PASS_SCORE - currentScore);
                     const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
 
@@ -327,8 +330,7 @@
                         <td class="sub-col">${m6} 題<span class="sub-score">(${(m6*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
                         
                         <td class="total-highlight">${totalCount} 題<span class="sub-score" style="color: #1e3a8a; font-weight: 600;">(${currentScore.toFixed(2)}分)</span></td>
-                        
-                        <td class="clinical-highlight">${clinicalCount} 題<span class="sub-score">(${clinicalScore.toFixed(2)}分)</span></td>
+                        <td class="clinical-highlight">${clinicalCount} 題<span class="sub-score" style="color: #4b5563;">(${clinicalScore.toFixed(2)}分)</span></td>
                         
                         <td>
                             <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
@@ -339,10 +341,11 @@
                         <td class="${neededQuestions > 0 ? 'highlight-text' : ''}">
                             ${neededQuestions > 0 ? `還差 ${neededQuestions} 題` : '🎉 已過線 (0 題)'}
                         </td>
-                    `; // 這裡修正了您原始碼漏掉的 </tr> 閉合問題
+                    `;
                     tbody.appendChild(row);
                 });
 
+                // 數據處理完畢後，直接自動展開最新表格
                 tableContainer.style.display = 'block';
 
             } catch (error) {

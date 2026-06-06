@@ -126,24 +126,19 @@
             border-collapse: collapse;
             text-align: left;
         }
+        
+        /* 統一整條表頭樣式為深藍底、白字 */
         th {
-            background-color: #1e3a8a;
-            color: #ffffff;
+            background-color: #1e3a8a !important;
+            color: #ffffff !important;
             font-weight: 600;
-            padding: 14px 10px;
+            padding: 16px 10px;
             font-size: 14px;
             text-align: center;
         }
         th:first-child {
             text-align: left;
             padding-left: 16px;
-        }
-        
-        /* 關鍵修正：強制讓分科表頭文字顯現，不被底色吃掉 */
-        th.sub-col {
-            background-color: #e2e8f0 !important;
-            color: #1e3a8a !important; 
-            font-weight: 700;
         }
         
         td {
@@ -160,6 +155,7 @@
             background-color: #f8fafc;
         }
         
+        /* 僅保留表格內容區（Data row）的淺灰底做分科視覺區隔 */
         td.sub-col {
             background-color: #f8fafc;
         }
@@ -225,10 +221,10 @@
             <thead>
                 <tr>
                     <th>年度與期別</th>
-                    <th class="sub-col">醫學 3</th>
-                    <th class="sub-col">醫學 4</th>
-                    <th class="sub-col">醫學 5</th>
-                    <th class="sub-col">醫學 6</th>
+                    <th>醫學 3</th>
+                    <th>醫學 4</th>
+                    <th>醫學 5</th>
+                    <th>醫學 6</th>
                     <th>總題數</th>
                     <th>當前總分 (含醫5)</th>
                     <th>及格狀態</th>

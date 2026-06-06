@@ -35,7 +35,7 @@
             font-size: 15px;
         }
         
-        /* 上傳區塊樣式 */
+        /* 上傳與刷題工具區塊樣式 */
         .upload-card {
             background: #ffffff;
             border: 2px dashed #3b82f6;
@@ -45,11 +45,25 @@
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             margin-bottom: 25px;
             transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
         }
         .upload-card:hover {
             border-color: #1d4ed8;
             background-color: #eff6ff;
         }
+        
+        /* 按鈕群組排版 */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
         .upload-btn-wrapper {
             position: relative;
             overflow: hidden;
@@ -66,6 +80,10 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
         }
         .btn:hover {
             background-color: #1d4ed8;
@@ -79,52 +97,21 @@
             opacity: 0;
             cursor: pointer;
         }
+        
+        /* 國考刷題專用按鈕樣式 */
+        .btn-quiz {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .btn-quiz:hover {
+            background-color: #059669;
+            border-color: #059669;
+        }
+        
         .upload-tip {
-            margin-top: 10px;
             font-size: 13px;
             color: #64748b;
-        }
-
-        /* 🚀 新增：刷題傳送門快捷區樣式 */
-        .portal-card {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border: 1px solid #bfdbfe;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .portal-info h4 {
-            color: #1e40af;
-            font-size: 16px;
-            margin-bottom: 4px;
-        }
-        .portal-info p {
-            color: #1e3a8a;
-            font-size: 13px;
-            opacity: 0.8;
-        }
-        .portal-link-btn {
-            display: inline-block;
-            background-color: #2563eb;
-            color: #ffffff !important;
-            text-decoration: none !important;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-            transition: all 0.2s ease;
-        }
-        .portal-link-btn:hover {
-            background-color: #1d4ed8;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.3);
+            margin-top: 5px;
         }
 
         .rules-card {
@@ -255,90 +242,13 @@
     </header>
 
     <div class="upload-card">
-        <div class="upload-btn-wrapper">
-            <button class="btn">選擇並上傳 .json 檔案</button>
-            <input type="file" id="file-input" accept=".json" />
+        <div class="btn-group">
+            <div class="upload-btn-wrapper">
+                <button class="btn">選擇並上傳 .json 檔案</button>
+                <input type="file" id="file-input" accept=".json" />
+            </div>
+            <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" class="btn btn-quiz">
+                📝 前往國考二階刷題模擬器 ↗
+            </a>
         </div>
-        <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動重新整理網頁。</div>
-    </div>
-
-    <div class="portal-card">
-        <div class="portal-info">
-            <h4>📝 醫師國考二階題庫模擬器</h4>
-            <p>分析完落點與醫 5 差距了嗎？立刻前往模擬器進行章節與歷屆刷題強化吧！</p>
-        </div>
-        <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" class="portal-link-btn">
-            前往國考刷題 ➔
-        </a>
-    </div>
-
-    <div class="rules-card">
-        <h3>📊 計算規則與設定說明</h3>
-        <ul>
-            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
-            <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>欄位合併：</strong>已將醫學 5 差距題數與分數合併，呈現更精簡直覺。</li>
-        </ul>
-    </div>
-
-    <div id="error-box" class="error-message"></div>
-
-    <div class="table-container" id="table-container">
-        <table id="result-table">
-            <thead>
-                <tr>
-                    <th>年度與期別</th>
-                    <th>醫學 3</th>
-                    <th>醫學 4</th>
-                    <th>醫學 5</th>
-                    <th>醫學 6</th>
-                    <th>總題數(總分)</th>
-                    <th>總題數(總分)-不含醫5</th>
-                    <th>及格狀態</th>
-                    <th>醫學5 還差幾題？(需補足分數)</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                </tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    const PASS_SCORE = 240;
-    const POINTS_PER_QUESTION = 1.25;
-
-    function formatYearTerm(code) {
-        if(code.length !== 4) return code;
-        const year = code.substring(0, 3);
-        const term = code.substring(3) === '1' ? '第一次' : '第二次';
-        return `${year}年 ${term}`;
-    }
-
-    document.getElementById('file-input').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        const errorBox = document.getElementById('error-box');
-        const tableContainer = document.getElementById('table-container');
-        const tbody = document.getElementById('table-body');
-
-        errorBox.style.display = 'none';
-        tableContainer.style.display = 'none';
-        tbody.innerHTML = '';
-
-        reader.onload = function(event) {
-            try {
-                const data = JSON.parse(event.target.result);
-                const stats = {};
-
-                Object.keys(data).forEach(key => {
-                    if (key === 'metadata') return;
-                    
-                    const yearTerm = key.substring(0, 4);
-                    const subject = key.substring(4, 5);
-                    const result = data[key];
-                    const isCorrect = Array.isArray(result) ? result[0] : result;
-
-                    if (!
+        <div class="upload-tip">選取新檔案後表格將自動即

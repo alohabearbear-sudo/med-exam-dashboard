@@ -17,12 +17,13 @@
             padding: 40px 20px;
         }
         .container {
-            max-width: 1300px; /* 擴大容器寬度以容納更多欄位 */
+            max-width: 1300px;
             margin: 0 auto;
         }
         header {
             margin-bottom: 30px;
             text-align: center;
+            display: block !important; /* 確保標題絕對不會被隱藏 */
         }
         header h1 {
             color: #1e3a8a;
@@ -151,7 +152,6 @@
             background-color: #f8fafc;
         }
         
-        /* 科目欄位微調色底 */
         .sub-col {
             background-color: #f8fafc;
         }
@@ -221,7 +221,7 @@
                     <th class="sub-col">醫學 4</th>
                     <th class="sub-col">醫學 5</th>
                     <th class="sub-col">醫學 6</th>
-                    <th>醫3~醫6 總題數</th>
+                    <th>總題數</th>
                     <th>當前總分 (含醫5)</th>
                     <th>及格狀態</th>
                     <th>醫學5 需補足分數</th>
@@ -266,20 +266,14 @@
                     if (key === 'metadata') return;
                     
                     const yearTerm = key.substring(0, 4);
-                    const subject = key.substring(4, 5); // 3, 4, 5, 6
+                    const subject = key.substring(4, 5);
                     const result = data[key];
                     const isCorrect = Array.isArray(result) ? result[0] : result;
 
                     if (!stats[yearTerm]) {
-                        stats[yearTerm] = {
-                            '3': 0,
-                            '4': 0,
-                            '5': 0,
-                            '6': 0
-                        };
+                        stats[yearTerm] = { '3': 0, '4': 0, '5': 0, '6': 0 };
                     }
 
-                    // 統計 3, 4, 5, 6 各考科
                     if (['3', '4', '5', '6'].includes(subject) && isCorrect === 1) {
                         stats[yearTerm][subject] += 1;
                     }
@@ -292,18 +286,15 @@
                 }
 
                 sortedTerms.forEach(term => {
-                    const m3 = stats[term]['3'];
-                    const m4 = stats[term]['4'];
-                    const m5 = stats[term]['5'];
-                    const m6 = stats[term]['6'];
+                    const m3 = stats[term]['3'] || 0;
+                    const m4 = stats[term]['4'] || 0;
+                    const m5 = stats[term]['5'] || 0;
+                    const m6 = stats[term]['6'] || 0;
                     
-                    // 總答對題數 (醫3 + 醫4 + 醫5 + 醫6)
                     const totalCount = m3 + m4 + m5 + m6;
-                    // 當前總分數
                     const currentScore = totalCount * POINTS_PER_QUESTION;
                     const isPassed = currentScore >= PASS_SCORE;
                     
-                    // 計算與 240 分的差距
                     const neededScore = Math.max(0, PASS_SCORE - currentScore);
                     const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
 

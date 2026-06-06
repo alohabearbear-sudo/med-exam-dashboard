@@ -35,7 +35,7 @@
             font-size: 15px;
         }
         
-        /* 工具區塊樣式 */
+        /* 控制中心區塊樣式 */
         .upload-card {
             background: #ffffff;
             border: 2px dashed #3b82f6;
@@ -56,6 +56,7 @@
             background-color: #eff6ff;
         }
         
+        /* 按鈕群組水平排版 */
         .btn-group {
             display: flex;
             gap: 15px;
@@ -97,7 +98,7 @@
             cursor: pointer;
         }
         
-        /* 國考傳送門快捷按鈕 */
+        /* 國考傳送門快捷按鈕樣式 */
         .btn-portal {
             background-color: #10b981;
             border-color: #10b981;
@@ -155,6 +156,7 @@
             text-align: left;
         }
         
+        /* 核心修正：確保整排表頭100%完全統一為深藍底、白字 */
         th {
             background-color: #1e3a8a !important;
             color: #ffffff !important;
@@ -171,4 +173,149 @@
         
         td {
             padding: 14px 10px;
-            border-bottom: 1px solid #e2e8f
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13.5px;
+            text-align: center;
+        }
+        td:first-child {
+            text-align: left;
+            padding-left: 16px;
+        }
+        tr:hover {
+            background-color: #f8fafc;
+        }
+        
+        /* 表格內文資料區的分科淡灰底區隔 */
+        td.sub-col {
+            background-color: #f8fafc;
+        }
+        .sub-score {
+            font-size: 11px;
+            color: #64748b;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* 加總統計欄位的淡淡色系襯底 */
+        .total-highlight {
+            font-weight: 600;
+            background-color: #f0fdf4; /* 淡淡綠底 */
+        }
+        .clinical-highlight {
+            font-weight: 500;
+            background-color: #eff6ff; /* 淡淡藍底 */
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+        }
+        .badge-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .badge-fail {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* 合併後的差距欄位醒目紅底樣式 */
+        .gap-highlight {
+            font-weight: bold;
+            color: #ef4444;
+            background-color: #fff5f5;
+        }
+        .gap-score {
+            font-size: 11px;
+            color: #b91c1c;
+            display: block;
+            margin-top: 2px;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>醫師國考歷年分數與及格分析看板</h1>
+        <p>上傳您的答題紀錄 JSON 檔案，網頁將自動即時刷新分科數據與落點表格</p>
+    </header>
+
+    <div class="upload-card">
+        <div class="btn-group">
+            <div class="upload-btn-wrapper">
+                <button class="btn">選擇並上傳 .json 檔案</button>
+                <input type="file" id="file-input" accept=".json" />
+            </div>
+            <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" class="btn btn-portal">
+                📝 國考傳送門 ↗
+            </a>
+        </div>
+        <div class="upload-tip">檔案僅在您的瀏覽器本地端解析。只要選取新檔案，底下的表格就會立刻全自動計算刷新。</div>
+    </div>
+
+    <div class="rules-card">
+        <h3>📊 計算規則與設定說明</h3>
+        <ul>
+            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
+            <li>• 每題配分：<strong>1.25 分</strong></li>
+            <li>• <strong>新版架構：</strong>包含全新分科題數、總題數(總分)含醫5、總題數(總分)不含醫5，以及右側合併差距欄位。</li>
+        </ul>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+
+    <div class="table-container" id="table-container">
+        <table id="result-table">
+            <thead>
+                <tr>
+                    <th>年度與期別</th>
+                    <th>醫學 3</th>
+                    <th>醫學 4</th>
+                    <th>醫學 5</th>
+                    <th>醫學 6</th>
+                    <th>總題數(總分)</th>
+                    <th>總題數(總分)-不含醫5</th>
+                    <th>及格狀態</th>
+                    <th>醫學5 還差幾題？(Ref:需補足分數)</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const PASS_SCORE = 240;
+    const POINTS_PER_QUESTION = 1.25;
+
+    function formatYearTerm(code) {
+        if(code.length !== 4) return code;
+        const year = code.substring(0, 3);
+        const term = code.substring(3) === '1' ? '第一次' : '第二次';
+        return `${year}年 ${term}`;
+    }
+
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        const errorBox = document.getElementById('error-box');
+        const tableContainer = document.getElementById('table-container');
+        const tbody = document.getElementById('table-body');
+
+        // 上傳新檔案時強制清空舊狀態
+        errorBox.style.display = 'none';
+        tableContainer.style.display = 'none';
+        tbody.innerHTML = '';
+
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                const

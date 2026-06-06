@@ -56,7 +56,6 @@
             background-color: #eff6ff;
         }
         
-        /* 按鈕群組水平排版 */
         .btn-group {
             display: flex;
             gap: 15px;
@@ -98,7 +97,6 @@
             cursor: pointer;
         }
         
-        /* 國考傳送門快捷按鈕樣式 */
         .btn-portal {
             background-color: #10b981;
             border-color: #10b981;
@@ -156,7 +154,6 @@
             text-align: left;
         }
         
-        /* 核心修正：確保整排表頭100%完全統一為深藍底、白字 */
         th {
             background-color: #1e3a8a !important;
             color: #ffffff !important;
@@ -185,7 +182,6 @@
             background-color: #f8fafc;
         }
         
-        /* 表格內文資料區的分科淡灰底區隔 */
         td.sub-col {
             background-color: #f8fafc;
         }
@@ -196,14 +192,13 @@
             margin-top: 2px;
         }
 
-        /* 加總統計欄位的淡淡色系襯底 */
         .total-highlight {
             font-weight: 600;
-            background-color: #f0fdf4; /* 淡淡綠底 */
+            background-color: #f0fdf4;
         }
         .clinical-highlight {
             font-weight: 500;
-            background-color: #eff6ff; /* 淡淡藍底 */
+            background-color: #eff6ff;
         }
 
         .badge {
@@ -223,7 +218,6 @@
             color: #991b1b;
         }
         
-        /* 合併後的差距欄位醒目紅底樣式 */
         .gap-highlight {
             font-weight: bold;
             color: #ef4444;
@@ -256,7 +250,7 @@
                 📝 國考傳送門 ↗
             </a>
         </div>
-        <div class="upload-tip">檔案僅在您的瀏覽器本地端解析。只要選取新檔案，底下的表格就會立刻全自動計算刷新。</div>
+        <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動重新整理網頁。</div>
     </div>
 
     <div class="rules-card">
@@ -264,7 +258,7 @@
         <ul>
             <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>新版架構：</strong>包含全新分科題數、總題數(總分)含醫5、總題數(總分)不含醫5，以及右側合併差距欄位。</li>
+            <li>• <strong>更新說明：</strong>右側完美切分成「總題數(總分)」、「總題數(總分)-不含醫5」以及最右側合併欄位。</li>
         </ul>
     </div>
 
@@ -282,7 +276,7 @@
                     <th>總題數(總分)</th>
                     <th>總題數(總分)-不含醫5</th>
                     <th>及格狀態</th>
-                    <th>醫學5 還差幾題？(Ref:需補足分數)</th>
+                    <th>醫學5 還差幾題？(需補足分數)</th>
                 </tr>
             </thead>
             <tbody id="table-body"></tbody>
@@ -310,7 +304,6 @@
         const tableContainer = document.getElementById('table-container');
         const tbody = document.getElementById('table-body');
 
-        // 上傳新檔案時強制清空舊狀態
         errorBox.style.display = 'none';
         tableContainer.style.display = 'none';
         tbody.innerHTML = '';
@@ -318,4 +311,61 @@
         reader.onload = function(event) {
             try {
                 const data = JSON.parse(event.target.result);
-                const
+                const stats = {};
+
+                Object.keys(data).forEach(key => {
+                    // 【防呆除錯大升級】用最穩穩的方法防呆：前4位必須是數字，長度必須大於等於5，才抓科目。徹底無視 metadata 物件
+                    if (isNaN(key.substring(0, 4)) || key.length < 5) return;
+                    
+                    const yearTerm = key.substring(0, 4);
+                    const subject = key.substring(4, 5);
+                    const result = data[key];
+                    
+                    // 安全提取答題結果
+                    const isCorrect = Array.isArray(result) ? result[0] : result;
+
+                    if (!stats[yearTerm]) {
+                        stats[yearTerm] = { '3': 0, '4': 0, '5': 0, '6': 0 };
+                    }
+
+                    if (['3', '4', '5', '6'].includes(subject) && isCorrect === 1) {
+                        stats[yearTerm][subject] += 1;
+                    }
+                });
+
+                const sortedTerms = Object.keys(stats).sort();
+                
+                if (sortedTerms.length === 0) {
+                    throw new Error('找不到符合醫師國考編碼（例如1112301）的題目歷史數據。');
+                }
+
+                sortedTerms.forEach(term => {
+                    const m3 = stats[term]['3'] || 0;
+                    const m4 = stats[term]['4'] || 0;
+                    const m5 = stats[term]['5'] || 0;
+                    const m6 = stats[term]['6'] || 0;
+                    
+                    const totalCount = m3 + m4 + m5 + m6;
+                    const currentScore = totalCount * POINTS_PER_QUESTION;
+                    const isPassed = currentScore >= PASS_SCORE;
+                    
+                    const clinicalCount = m3 + m4 + m6;
+                    const clinicalScore = clinicalCount * POINTS_PER_QUESTION;
+                    
+                    const neededScore = Math.max(0, PASS_SCORE - currentScore);
+                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${formatYearTerm(term)} (${term})</strong></td>
+                        <td class="sub-col">${m3} 題<span class="sub-score">(${(m3*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col">${m4} 題<span class="sub-score">(${(m4*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col" style="${m5 > 0 ? 'font-weight:bold; color:#059669;' : ''}">${m5} 題<span class="sub-score">(${(m5*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col">${m6} 題<span class="sub-score">(${(m6*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        
+                        <td class="total-highlight">${totalCount} 題<span class="sub-score" style="color: #1e3a8a; font-weight: 600;">(${currentScore.toFixed(2)}分)</span></td>
+                        <td class="clinical-highlight">${clinicalCount} 題<span class="sub-score" style="color: #4b5563;">(${clinicalScore.toFixed(2)}分)</span></td>
+                        
+                        <td>
+                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
+                                ${is

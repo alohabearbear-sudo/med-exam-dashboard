@@ -17,7 +17,7 @@
             padding: 40px 20px;
         }
         .container {
-            max-width: 1400px;
+            max-width: 1450px;
             margin: 0 auto;
         }
         header {
@@ -35,7 +35,7 @@
             font-size: 15px;
         }
         
-        /* 上傳與刷題工具區塊樣式 */
+        /* 控制中心區塊樣式 */
         .upload-card {
             background: #ffffff;
             border: 2px dashed #3b82f6;
@@ -56,7 +56,6 @@
             background-color: #eff6ff;
         }
         
-        /* 按鈕群組排版 */
         .btn-group {
             display: flex;
             gap: 15px;
@@ -98,7 +97,6 @@
             cursor: pointer;
         }
         
-        /* 國考刷題專用按鈕樣式 */
         .btn-quiz {
             background-color: #10b981;
             border-color: #10b981;
@@ -238,7 +236,7 @@
 <div class="container">
     <header>
         <h1>醫師國考歷年分數與及格分析看板</h1>
-        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析</p>
+        <p>上傳您的答題紀錄 JSON 檔案，網頁將自動即時刷新分科數據與落點表格</p>
     </header>
 
     <div class="upload-card">
@@ -251,4 +249,149 @@
                 📝 前往國考二階刷題模擬器 ↗
             </a>
         </div>
-        <div class="upload-tip">選取新檔案後表格將自動即
+        <div class="upload-tip">選取新檔案後表格將自動即時刷新。點擊綠色按鈕可直接在新分頁開啟刷題系統。</div>
+    </div>
+
+    <div class="rules-card">
+        <h3>📊 計算規則與設定說明</h3>
+        <ul>
+            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
+            <li>• 每題配分：<strong>1.25 分</strong></li>
+            <li>• <strong>便捷工具：</strong>上方已為您配置刷題模擬器傳送門，方便一鍵往返練習。</li>
+        </ul>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+
+    <div class="table-container" id="table-container">
+        <table id="result-table">
+            <thead>
+                <tr>
+                    <th>年度與期別</th>
+                    <th>醫學 3</th>
+                    <th>醫學 4</th>
+                    <th>醫學 5</th>
+                    <th>醫學 6</th>
+                    <th>總題數(總分)</th>
+                    <th>總題數(總分)-不含醫5</th>
+                    <th>及格狀態</th>
+                    <th>醫學5 還差幾題？(需補足分數)</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const PASS_SCORE = 240;
+    const POINTS_PER_QUESTION = 1.25;
+
+    function formatYearTerm(code) {
+        if(code.length !== 4) return code;
+        const year = code.substring(0, 3);
+        const term = code.substring(3) === '1' ? '第一次' : '第二次';
+        return `${year}年 ${term}`;
+    }
+
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        const errorBox = document.getElementById('error-box');
+        const tableContainer = document.getElementById('table-container');
+        const tbody = document.getElementById('table-body');
+
+        // 強制重置與隱藏
+        errorBox.style.display = 'none';
+        tableContainer.style.display = 'none';
+        tbody.innerHTML = '';
+
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                const stats = {};
+
+                Object.keys(data).forEach(key => {
+                    // 安全過濾：跳過 metadata 或長度不符的 key
+                    if (key === 'metadata' || key.length < 5) return;
+                    
+                    const yearTerm = key.substring(0, 4);
+                    const subject = key.substring(4, 5);
+                    const result = data[key];
+                    const isCorrect = Array.isArray(result) ? result[0] : result;
+
+                    if (!stats[yearTerm]) {
+                        stats[yearTerm] = { '3': 0, '4': 0, '5': 0, '6': 0 };
+                    }
+
+                    if (['3', '4', '5', '6'].includes(subject) && isCorrect === 1) {
+                        stats[yearTerm][subject] += 1;
+                    }
+                });
+
+                const sortedTerms = Object.keys(stats).sort();
+                
+                if (sortedTerms.length === 0) {
+                    throw new Error('JSON 格式正確，但內文找不到符合 1112301 格式的題目代碼數據！');
+                }
+
+                sortedTerms.forEach(term => {
+                    const m3 = stats[term]['3'] || 0;
+                    const m4 = stats[term]['4'] || 0;
+                    const m5 = stats[term]['5'] || 0;
+                    const m6 = stats[term]['6'] || 0;
+                    
+                    const totalCount = m3 + m4 + m5 + m6;
+                    const currentScore = totalCount * POINTS_PER_QUESTION;
+                    const isPassed = currentScore >= PASS_SCORE;
+                    
+                    const clinicalCount = m3 + m4 + m6;
+                    const clinicalScore = clinicalCount * POINTS_PER_QUESTION;
+                    
+                    const neededScore = Math.max(0, PASS_SCORE - currentScore);
+                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${formatYearTerm(term)} (${term})</strong></td>
+                        <td class="sub-col">${m3} 題<span class="sub-score">(${(m3*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col">${m4} 題<span class="sub-score">(${(m4*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col" style="${m5 > 0 ? 'font-weight:bold; color:#059669;' : ''}">${m5} 題<span class="sub-score">(${(m5*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        <td class="sub-col">${m6} 題<span class="sub-score">(${(m6*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
+                        
+                        <td class="total-highlight">${totalCount} 題<span class="sub-score" style="color: #1e3a8a; font-weight: 600;">(${currentScore.toFixed(2)}分)</span></td>
+                        <td class="clinical-highlight">${clinicalCount} 題<span class="sub-score" style="color: #4b5563;">(${clinicalScore.toFixed(2)}分)</span></td>
+                        
+                        <td>
+                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
+                                ${isPassed ? '已過線' : '未及格'}
+                            </span>
+                        </td>
+                        
+                        <td class="${neededQuestions > 0 ? 'gap-highlight' : ''}">
+                            ${neededQuestions > 0 ? `還差 ${neededQuestions} 題 <span class="gap-score">(需補足 ${neededScore.toFixed(2)} 分)</span>` : '🎉 已過線 (0 題)'}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // 渲染完畢後解除隱藏
+                tableContainer.style.display = 'block';
+
+            } catch (error) {
+                console.error(error);
+                errorBox.textContent = '讀取失敗：' + error.message;
+                errorBox.style.display = 'block';
+                tableContainer.style.display = 'none';
+            }
+        };
+
+        reader.readAsText(file);
+    });
+</script>
+
+</body>
+</html>

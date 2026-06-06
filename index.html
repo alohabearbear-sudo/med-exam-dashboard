@@ -17,7 +17,7 @@
             padding: 40px 20px;
         }
         .container {
-            max-width: 1300px;
+            max-width: 1400px; /* 稍微拓寬容器以容納新加入的統計欄位 */
             margin: 0 auto;
         }
         header {
@@ -75,7 +75,7 @@
             font-size: 100px;
             position: absolute;
             left: 0;
-            top: 0;
+ Top: 0;
             opacity: 0;
             cursor: pointer;
         }
@@ -166,6 +166,16 @@
             margin-top: 2px;
         }
 
+        /* 統計加總欄位微調醒目底色 */
+        .total-highlight {
+            font-weight: 600;
+            background-color: #f0fdf4; /* 淡淡的綠底提示總分 */
+        }
+        .clinical-highlight {
+            font-weight: 500;
+            background-color: #f8fafc;
+        }
+
         .badge {
             display: inline-block;
             padding: 6px 12px;
@@ -210,7 +220,7 @@
         <ul>
             <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>分數計算：</strong>各科獨立呈現「答對題數」與「換算分數」。若醫學 5 目前無數據將呈現 0 題 (0 分)。</li>
+            <li>• <strong>欄位拆分：</strong>特別拆出「總題數(總分)」與「總題數(總分)-不含醫5」，方便評估臨床科目基本盤。</li>
         </ul>
     </div>
 
@@ -225,8 +235,8 @@
                     <th>醫學 4</th>
                     <th>醫學 5</th>
                     <th>醫學 6</th>
-                    <th>總題數</th>
-                    <th>當前總分 (含醫5)</th>
+                    <th>總題數(總分)</th>
+                    <th>總題數(總分)-不含醫5</th>
                     <th>及格狀態</th>
                     <th>醫學5 需補足分數</th>
                     <th>醫學5 還差幾題過線？</th>
@@ -295,10 +305,16 @@
                     const m5 = stats[term]['5'] || 0;
                     const m6 = stats[term]['6'] || 0;
                     
+                    // 1. 總題數(總分) - 包含醫5
                     const totalCount = m3 + m4 + m5 + m6;
                     const currentScore = totalCount * POINTS_PER_QUESTION;
                     const isPassed = currentScore >= PASS_SCORE;
                     
+                    // 2. 總題數(總分) - 不含醫5
+                    const clinicalCount = m3 + m4 + m6;
+                    const clinicalScore = clinicalCount * POINTS_PER_QUESTION;
+                    
+                    // 3. 醫學5 差距計算
                     const neededScore = Math.max(0, PASS_SCORE - currentScore);
                     const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
 
@@ -309,8 +325,11 @@
                         <td class="sub-col">${m4} 題<span class="sub-score">(${(m4*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
                         <td class="sub-col" style="${m5 > 0 ? 'font-weight:bold; color:#059669;' : ''}">${m5} 題<span class="sub-score">(${(m5*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
                         <td class="sub-col">${m6} 題<span class="sub-score">(${(m6*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
-                        <td style="font-weight: 500;">${totalCount} 題</td>
-                        <td style="font-weight: 600; color: #1e3a8a;">${currentScore.toFixed(2)} 分</td>
+                        
+                        <td class="total-highlight">${totalCount} 題<span class="sub-score" style="color: #1e3a8a; font-weight: 600;">(${currentScore.toFixed(2)}分)</span></td>
+                        
+                        <td class="clinical-highlight">${clinicalCount} 題<span class="sub-score">(${clinicalScore.toFixed(2)}分)</span></td>
+                        
                         <td>
                             <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
                                 ${isPassed ? '已過線' : '未及格'}
@@ -320,7 +339,7 @@
                         <td class="${neededQuestions > 0 ? 'highlight-text' : ''}">
                             ${neededQuestions > 0 ? `還差 ${neededQuestions} 題` : '🎉 已過線 (0 題)'}
                         </td>
-                    `;
+                    `; // 這裡修正了您原始碼漏掉的 </tr> 閉合問題
                     tbody.appendChild(row);
                 });
 

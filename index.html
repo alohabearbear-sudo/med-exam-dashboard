@@ -17,7 +17,7 @@
             padding: 40px 20px;
         }
         .container {
-            max-width: 1450px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         header {
@@ -35,7 +35,7 @@
             font-size: 15px;
         }
         
-        /* 控制中心區塊樣式 */
+        /* 上傳區塊樣式 */
         .upload-card {
             background: #ffffff;
             border: 2px dashed #3b82f6;
@@ -45,24 +45,11 @@
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             margin-bottom: 25px;
             transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
         }
         .upload-card:hover {
             border-color: #1d4ed8;
             background-color: #eff6ff;
         }
-        
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
         .upload-btn-wrapper {
             position: relative;
             overflow: hidden;
@@ -79,10 +66,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
         }
         .btn:hover {
             background-color: #1d4ed8;
@@ -96,20 +79,10 @@
             opacity: 0;
             cursor: pointer;
         }
-        
-        .btn-quiz {
-            background-color: #10b981;
-            border-color: #10b981;
-        }
-        .btn-quiz:hover {
-            background-color: #059669;
-            border-color: #059669;
-        }
-        
         .upload-tip {
+            margin-top: 10px;
             font-size: 13px;
             color: #64748b;
-            margin-top: 5px;
         }
 
         .rules-card {
@@ -220,7 +193,7 @@
         .gap-highlight {
             font-weight: bold;
             color: #ef4444;
-            background-color: #fff5f5;
+            background-color: #fff5f5; /* 淡淡紅底提示差距 */
         }
         .gap-score {
             font-size: 11px;
@@ -236,20 +209,15 @@
 <div class="container">
     <header>
         <h1>醫師國考歷年分數與及格分析看板</h1>
-        <p>上傳您的答題紀錄 JSON 檔案，網頁將自動即時刷新分科數據與落點表格</p>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析</p>
     </header>
 
     <div class="upload-card">
-        <div class="btn-group">
-            <div class="upload-btn-wrapper">
-                <button class="btn">選擇並上傳 .json 檔案</button>
-                <input type="file" id="file-input" accept=".json" />
-            </div>
-            <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" class="btn btn-quiz">
-                📝 前往國考二階刷題模擬器 ↗
-            </a>
+        <div class="upload-btn-wrapper">
+            <button class="btn">選擇並上傳 .json 檔案</button>
+            <input type="file" id="file-input" accept=".json" />
         </div>
-        <div class="upload-tip">選取新檔案後表格將自動即時刷新。點擊綠色按鈕可直接在新分頁開啟刷題系統。</div>
+        <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動重新整理網頁。</div>
     </div>
 
     <div class="rules-card">
@@ -257,7 +225,7 @@
         <ul>
             <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>便捷工具：</strong>上方已為您配置刷題模擬器傳送門，方便一鍵往返練習。</li>
+            <li>• <strong>欄位合併：</strong>已將醫學 5 差距題數與分數合併，呈現更精簡直覺。</li>
         </ul>
     </div>
 
@@ -304,7 +272,6 @@
         const tableContainer = document.getElementById('table-container');
         const tbody = document.getElementById('table-body');
 
-        // 強制重置與隱藏
         errorBox.style.display = 'none';
         tableContainer.style.display = 'none';
         tbody.innerHTML = '';
@@ -315,8 +282,7 @@
                 const stats = {};
 
                 Object.keys(data).forEach(key => {
-                    // 安全過濾：跳過 metadata 或長度不符的 key
-                    if (key === 'metadata' || key.length < 5) return;
+                    if (key === 'metadata') return;
                     
                     const yearTerm = key.substring(0, 4);
                     const subject = key.substring(4, 5);
@@ -335,7 +301,7 @@
                 const sortedTerms = Object.keys(stats).sort();
                 
                 if (sortedTerms.length === 0) {
-                    throw new Error('JSON 格式正確，但內文找不到符合 1112301 格式的題目代碼數據！');
+                    throw new Error('JSON 檔案格式解析成功，但未偵測到符合國考科目編碼的答題數據。');
                 }
 
                 sortedTerms.forEach(term => {
@@ -356,7 +322,7 @@
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td><strong>${formatYearTerm(term)} (${term})</strong></td>
+                        <td><strong>${formatYearTerm(term)}</strong></td>
                         <td class="sub-col">${m3} 題<span class="sub-score">(${(m3*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
                         <td class="sub-col">${m4} 題<span class="sub-score">(${(m4*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
                         <td class="sub-col" style="${m5 > 0 ? 'font-weight:bold; color:#059669;' : ''}">${m5} 題<span class="sub-score">(${(m5*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
@@ -378,7 +344,6 @@
                     tbody.appendChild(row);
                 });
 
-                // 渲染完畢後解除隱藏
                 tableContainer.style.display = 'block';
 
             } catch (error) {

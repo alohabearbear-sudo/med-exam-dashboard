@@ -85,6 +85,48 @@
             color: #64748b;
         }
 
+        /* 🚀 新增：刷題傳送門快捷區樣式 */
+        .portal-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #bfdbfe;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .portal-info h4 {
+            color: #1e40af;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        .portal-info p {
+            color: #1e3a8a;
+            font-size: 13px;
+            opacity: 0.8;
+        }
+        .portal-link-btn {
+            display: inline-block;
+            background-color: #2563eb;
+            color: #ffffff !important;
+            text-decoration: none !important;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            transition: all 0.2s ease;
+        }
+        .portal-link-btn:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.3);
+        }
+
         .rules-card {
             background: #ffffff;
             border-left: 5px solid #3b82f6;
@@ -193,7 +235,7 @@
         .gap-highlight {
             font-weight: bold;
             color: #ef4444;
-            background-color: #fff5f5; /* 淡淡紅底提示差距 */
+            background-color: #fff5f5;
         }
         .gap-score {
             font-size: 11px;
@@ -218,6 +260,16 @@
             <input type="file" id="file-input" accept=".json" />
         </div>
         <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動重新整理網頁。</div>
+    </div>
+
+    <div class="portal-card">
+        <div class="portal-info">
+            <h4>📝 醫師國考二階題庫模擬器</h4>
+            <p>分析完落點與醫 5 差距了嗎？立刻前往模擬器進行章節與歷屆刷題強化吧！</p>
+        </div>
+        <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" class="portal-link-btn">
+            前往國考刷題 ➔
+        </a>
     </div>
 
     <div class="rules-card">
@@ -289,74 +341,4 @@
                     const result = data[key];
                     const isCorrect = Array.isArray(result) ? result[0] : result;
 
-                    if (!stats[yearTerm]) {
-                        stats[yearTerm] = { '3': 0, '4': 0, '5': 0, '6': 0 };
-                    }
-
-                    if (['3', '4', '5', '6'].includes(subject) && isCorrect === 1) {
-                        stats[yearTerm][subject] += 1;
-                    }
-                });
-
-                const sortedTerms = Object.keys(stats).sort();
-                
-                if (sortedTerms.length === 0) {
-                    throw new Error('JSON 檔案格式解析成功，但未偵測到符合國考科目編碼的答題數據。');
-                }
-
-                sortedTerms.forEach(term => {
-                    const m3 = stats[term]['3'] || 0;
-                    const m4 = stats[term]['4'] || 0;
-                    const m5 = stats[term]['5'] || 0;
-                    const m6 = stats[term]['6'] || 0;
-                    
-                    const totalCount = m3 + m4 + m5 + m6;
-                    const currentScore = totalCount * POINTS_PER_QUESTION;
-                    const isPassed = currentScore >= PASS_SCORE;
-                    
-                    const clinicalCount = m3 + m4 + m6;
-                    const clinicalScore = clinicalCount * POINTS_PER_QUESTION;
-                    
-                    const neededScore = Math.max(0, PASS_SCORE - currentScore);
-                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
-
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><strong>${formatYearTerm(term)}</strong></td>
-                        <td class="sub-col">${m3} 題<span class="sub-score">(${(m3*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
-                        <td class="sub-col">${m4} 題<span class="sub-score">(${(m4*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
-                        <td class="sub-col" style="${m5 > 0 ? 'font-weight:bold; color:#059669;' : ''}">${m5} 題<span class="sub-score">(${(m5*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
-                        <td class="sub-col">${m6} 題<span class="sub-score">(${(m6*POINTS_PER_QUESTION).toFixed(1)}分)</span></td>
-                        
-                        <td class="total-highlight">${totalCount} 題<span class="sub-score" style="color: #1e3a8a; font-weight: 600;">(${currentScore.toFixed(2)}分)</span></td>
-                        <td class="clinical-highlight">${clinicalCount} 題<span class="sub-score" style="color: #4b5563;">(${clinicalScore.toFixed(2)}分)</span></td>
-                        
-                        <td>
-                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
-                                ${isPassed ? '已過線' : '未及格'}
-                            </span>
-                        </td>
-                        
-                        <td class="${neededQuestions > 0 ? 'gap-highlight' : ''}">
-                            ${neededQuestions > 0 ? `還差 ${neededQuestions} 題 <span class="gap-score">(需補足 ${neededScore.toFixed(2)} 分)</span>` : '🎉 已過線 (0 題)'}
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-                tableContainer.style.display = 'block';
-
-            } catch (error) {
-                console.error(error);
-                errorBox.textContent = '讀取失敗：' + error.message;
-                errorBox.style.display = 'block';
-                tableContainer.style.display = 'none';
-            }
-        };
-
-        reader.readAsText(file);
-    });
-</script>
-
-</body>
-</html>
+                    if (!

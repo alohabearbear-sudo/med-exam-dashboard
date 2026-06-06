@@ -17,7 +17,7 @@
             padding: 40px 20px;
         }
         .container {
-            max-width: 1450px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         header {
@@ -35,7 +35,7 @@
             font-size: 15px;
         }
         
-        /* 控制中心區塊樣式 */
+        /* 上傳區塊樣式 */
         .upload-card {
             background: #ffffff;
             border: 2px dashed #3b82f6;
@@ -45,22 +45,19 @@
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             margin-bottom: 25px;
             transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
         }
         .upload-card:hover {
             border-color: #1d4ed8;
             background-color: #eff6ff;
         }
         
+        /* 新增：按鈕置中並排群組 */
         .btn-group {
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
             justify-content: center;
+            align-items: center;
         }
         
         .upload-btn-wrapper {
@@ -97,6 +94,7 @@
             cursor: pointer;
         }
         
+        /* 新增：國考傳送門專用綠色樣式 */
         .btn-portal {
             background-color: #10b981;
             border-color: #10b981;
@@ -107,7 +105,7 @@
         }
         
         .upload-tip {
-            margin-top: 5px;
+            margin-top: 10px;
             font-size: 13px;
             color: #64748b;
         }
@@ -217,7 +215,6 @@
             background-color: #fee2e2;
             color: #991b1b;
         }
-        
         .gap-highlight {
             font-weight: bold;
             color: #ef4444;
@@ -237,7 +234,7 @@
 <div class="container">
     <header>
         <h1>醫師國考歷年分數與及格分析看板</h1>
-        <p>上傳您的答題紀錄 JSON 檔案，網頁將自動即時刷新分科數據與落點表格</p>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析</p>
     </header>
 
     <div class="upload-card">
@@ -258,7 +255,7 @@
         <ul>
             <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>更新說明：</strong>右側完美切分成「總題數(總分)」、「總題數(總分)-不含醫5」以及最右側合併欄位。</li>
+            <li>• <strong>欄位合併：</strong>已將醫學 5 差距題數與分數合併，呈現更精簡直覺。</li>
         </ul>
     </div>
 
@@ -279,7 +276,8 @@
                     <th>醫學5 還差幾題？(需補足分數)</th>
                 </tr>
             </thead>
-            <tbody id="table-body"></tbody>
+            <tbody id="table-body">
+                </tbody>
         </table>
     </div>
 </div>
@@ -290,4 +288,14 @@
 
     function formatYearTerm(code) {
         if(code.length !== 4) return code;
-        const year = code.substring(0,
+        const year = code.substring(0, 3);
+        const term = code.substring(3) === '1' ? '第一次' : '第二次';
+        return `${year}年 ${term}`;
+    }
+
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        const errorBox = document.getElementById('error-box');

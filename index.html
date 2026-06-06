@@ -23,7 +23,7 @@
         header {
             margin-bottom: 30px;
             text-align: center;
-            display: block !important; /* 確保標題絕對不會被隱藏 */
+            display: block !important;
         }
         header h1 {
             color: #1e3a8a;
@@ -119,7 +119,7 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
-            display: none; /* 初始隱藏，上傳後顯示 */
+            display: none;
         }
         table {
             width: 100%;
@@ -138,6 +138,14 @@
             text-align: left;
             padding-left: 16px;
         }
+        
+        /* 關鍵修正：強制讓分科表頭文字顯現，不被底色吃掉 */
+        th.sub-col {
+            background-color: #e2e8f0 !important;
+            color: #1e3a8a !important; 
+            font-weight: 700;
+        }
+        
         td {
             padding: 14px 10px;
             border-bottom: 1px solid #e2e8f0;
@@ -152,7 +160,7 @@
             background-color: #f8fafc;
         }
         
-        .sub-col {
+        td.sub-col {
             background-color: #f8fafc;
         }
         .sub-score {

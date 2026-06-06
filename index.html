@@ -17,7 +17,7 @@
             padding: 40px 20px;
         }
         .container {
-            max-width: 1100px;
+            max-width: 1300px; /* 擴大容器寬度以容納更多欄位 */
             margin: 0 auto;
         }
         header {
@@ -129,17 +129,39 @@
             background-color: #1e3a8a;
             color: #ffffff;
             font-weight: 600;
-            padding: 16px;
-            font-size: 15px;
+            padding: 14px 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+        th:first-child {
+            text-align: left;
+            padding-left: 16px;
         }
         td {
-            padding: 16px;
+            padding: 14px 10px;
             border-bottom: 1px solid #e2e8f0;
-            font-size: 14px;
+            font-size: 13.5px;
+            text-align: center;
+        }
+        td:first-child {
+            text-align: left;
+            padding-left: 16px;
         }
         tr:hover {
             background-color: #f8fafc;
         }
+        
+        /* 科目欄位微調色底 */
+        .sub-col {
+            background-color: #f8fafc;
+        }
+        .sub-score {
+            font-size: 11px;
+            color: #64748b;
+            display: block;
+            margin-top: 2px;
+        }
+
         .badge {
             display: inline-block;
             padding: 6px 12px;
@@ -156,13 +178,10 @@
             background-color: #fee2e2;
             color: #991b1b;
         }
-        .text-center {
-            text-align: center;
-        }
         .highlight-text {
             font-weight: bold;
             color: #ef4444;
-            font-size: 16px;
+            font-size: 15px;
         }
     </style>
 </head>
@@ -171,7 +190,7 @@
 <div class="container">
     <header>
         <h1>醫師國考歷年分數與及格分析看板</h1>
-        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行數據落點分析</p>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析</p>
     </header>
 
     <div class="upload-card">
@@ -185,9 +204,9 @@
     <div class="rules-card">
         <h3>📊 計算規則與設定說明</h3>
         <ul>
-            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 滿分共 400 分)</li>
+            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>醫學 5 設定：</strong>目前預設未作答 (0 分)，並為您精準換算出「還差幾題」即可直接跨過及格線。</li>
+            <li>• <strong>分數計算：</strong>各科獨立呈現「答對題數」與「換算分數」。若醫學 5 目前無數據將呈現 0 題 (0 分)。</li>
         </ul>
     </div>
 
@@ -198,11 +217,15 @@
             <thead>
                 <tr>
                     <th>年度與期別</th>
-                    <th class="text-center">醫3~醫6 答對題數</th>
-                    <th class="text-center">當前總分 (未計醫5)</th>
-                    <th class="text-center">及格狀態</th>
-                    <th class="text-center">醫學5 需補足分數</th>
-                    <th class="text-center">醫學5 還差幾題過線？</th>
+                    <th class="sub-col">醫學 3</th>
+                    <th class="sub-col">醫學 4</th>
+                    <th class="sub-col">醫學 5</th>
+                    <th class="sub-col">醫學 6</th>
+                    <th>醫3~醫6 總題數</th>
+                    <th>當前總分 (含醫5)</th>
+                    <th>及格狀態</th>
+                    <th>醫學5 需補足分數</th>
+                    <th>醫學5 還差幾題過線？</th>
                 </tr>
             </thead>
             <tbody id="table-body">
@@ -223,87 +246,4 @@
     }
 
     document.getElementById('file-input').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        const errorBox = document.getElementById('error-box');
-        const tableContainer = document.getElementById('table-container');
-        const tbody = document.getElementById('table-body');
-
-        // 重置狀態
-        errorBox.style.display = 'none';
-        tbody.innerHTML = '';
-
-        reader.onload = function(event) {
-            try {
-                const data = JSON.parse(event.target.result);
-                const stats = {};
-
-                Object.keys(data).forEach(key => {
-                    // 過濾掉 metadata 等非題目的 key
-                    if (key === 'metadata') return;
-                    
-                    const yearTerm = key.substring(0, 4);
-                    const subject = key.substring(4, 5);
-                    const result = data[key];
-                    const isCorrect = Array.isArray(result) ? result[0] : result;
-
-                    if (!stats[yearTerm]) {
-                        stats[yearTerm] = { correctCount: 0 };
-                    }
-
-                    if ((subject === '3' || subject === '4' || subject === '6') && isCorrect === 1) {
-                        stats[yearTerm].correctCount += 1;
-                    }
-                });
-
-                const sortedTerms = Object.keys(stats).sort();
-                
-                if (sortedTerms.length === 0) {
-                    throw new Error('JSON 檔案格式解析成功，但未偵測到符合國考科目編碼的答題數據。');
-                }
-
-                sortedTerms.forEach(term => {
-                    const count = stats[term].correctCount;
-                    const currentScore = count * POINTS_PER_QUESTION;
-                    const isPassed = currentScore >= PASS_SCORE;
-                    
-                    const neededScore = Math.max(0, PASS_SCORE - currentScore);
-                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
-
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td><strong>${formatYearTerm(term)} (${term})</strong></td>
-                        <td class="text-center">${count} 題</td>
-                        <td class="text-center" style="font-weight: 600; color: #1e3a8a;">${currentScore.toFixed(2)} 分</td>
-                        <td class="text-center">
-                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
-                                ${isPassed ? '已過線' : '未及格'}
-                            </span>
-                        </td>
-                        <td class="text-center">${neededScore > 0 ? neededScore.toFixed(2) + ' 分' : '0.00 分'}</td>
-                        <td class="text-center ${neededQuestions > 0 ? 'highlight-text' : ''}">
-                            ${neededQuestions > 0 ? `還差 ${neededQuestions} 題` : '🎉 已過線 (0 題)'}
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-
-                // 顯示結果表格
-                tableContainer.style.display = 'block';
-
-            } catch (error) {
-                console.error(error);
-                errorBox.textContent = '讀取失敗：' + error.message;
-                errorBox.style.display = 'block';
-                tableContainer.style.display = 'none';
-            }
-        };
-
-        reader.readAsText(file);
-    });
-</script>
-
-</body>
-</html>
+        const file

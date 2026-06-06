@@ -225,7 +225,7 @@
         <ul>
             <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• <strong>顯示優化：</strong>全數據已調整為「分數 (題數)」與「總分 (總題數)」格式呈現。</li>
+            <li>• <strong>顯示優化：</strong>全數據格式為「分數 (題數)」與「總分 (總題數)」，且醫5差距與不含醫5的臨床分數線做精確對照。</li>
         </ul>
     </div>
 
@@ -281,9 +281,91 @@
                 const data = JSON.parse(event.target.result);
                 const stats = {};
 
-                Object.keys(data).forEach(key => {
-                    if (key === 'metadata') return;
+                // 使用萬無一失的 for...in 迴圈安全解析，主動排除 metadata 崩潰盲點
+                for (let key in data) {
+                    if (key === 'metadata' || key.length < 5) continue;
                     
                     const yearTerm = key.substring(0, 4);
                     const subject = key.substring(4, 5);
-                    const result
+                    const result = data[key];
+                    const isCorrect = Array.isArray(result) ? result[0] : result;
+
+                    if (!stats[yearTerm]) {
+                        stats[yearTerm] = { '3': 0, '4': 0, '5': 0, '6': 0 };
+                    }
+
+                    if (['3', '4', '5', '6'].includes(subject) && isCorrect === 1) {
+                        stats[yearTerm][subject] += 1;
+                    }
+                }
+
+                const sortedTerms = Object.keys(stats).sort();
+                
+                if (sortedTerms.length === 0) {
+                    throw new Error('JSON 解析成功，但找不到符合編碼格式的有效考題數據。');
+                }
+
+                sortedTerms.forEach(term => {
+                    const m3 = stats[term]['3'] || 0;
+                    const m4 = stats[term]['4'] || 0;
+                    const m5 = stats[term]['5'] || 0;
+                    const m6 = stats[term]['6'] || 0;
+                    
+                    // 含醫5的數據
+                    const totalCount = m3 + m4 + m5 + m6;
+                    const currentScore = totalCount * POINTS_PER_QUESTION;
+                    const isPassed = currentScore >= PASS_SCORE;
+                    
+                    // 不含醫5的數據
+                    const clinicalCount = m3 + m4 + m6;
+                    const clinicalScore = clinicalCount * POINTS_PER_QUESTION;
+                    const isClinicalPassed = clinicalScore >= PASS_SCORE;
+                    
+                    // 醫5還差幾題？（直接與不含醫5的臨床總分作差距對照）
+                    const neededScore = Math.max(0, PASS_SCORE - clinicalScore);
+                    const neededQuestions = Math.ceil(neededScore / POINTS_PER_QUESTION);
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${formatYearTerm(term)}</strong></td>
+                        <td class="sub-col"><strong>${(m3*POINTS_PER_QUESTION).toFixed(1)}分</strong><span class="sub-score">(${m3} 題)</span></td>
+                        <td class="sub-col"><strong>${(m4*POINTS_PER_QUESTION).toFixed(1)}分</strong><span class="sub-score">(${m4} 題)</span></td>
+                        <td class="sub-col" style="${m5 > 0 ? 'font-weight:bold; color:#059669;' : ''}"><strong>${(m5*POINTS_PER_QUESTION).toFixed(1)}分</strong><span class="sub-score">(${m5} 題)</span></td>
+                        <td class="sub-col"><strong>${(m6*POINTS_PER_QUESTION).toFixed(1)}分</strong><span class="sub-score">(${m6} 題)</span></td>
+                        
+                        <td class="total-highlight" style="color: #1e3a8a;"><strong>${currentScore.toFixed(2)} 分</strong><span class="sub-score">${totalCount} 題</span></td>
+                        <td class="clinical-highlight"><strong>${clinicalScore.toFixed(2)} 分</strong><span class="sub-score">${clinicalCount} 題</span></td>
+                        
+                        <td>
+                            <span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">
+                                ${isPassed ? '已過線' : '未及格'}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge ${isClinicalPassed ? 'badge-success' : 'badge-fail'}">
+                                ${isClinicalPassed ? '已過線' : '未及格'}
+                            </span>
+                        </td>
+                        <td class="${neededQuestions > 0 ? 'gap-highlight' : ''}">
+                            ${neededQuestions > 0 ? `還差 ${neededQuestions} 題 <span class="gap-score">(需補足 ${neededScore.toFixed(2)} 分)</span>` : '🎉 已過線 (0 題)'}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                tableContainer.style.display = 'block';
+
+            } catch (error) {
+                console.error(error);
+                errorBox.textContent = '讀取失敗：' + error.message;
+                errorBox.style.display = 'block';
+                tableContainer.style.display = 'none';
+            }
+        };
+
+        reader.readAsText(file);
+    });
+</script>
+
+</body>
+</html>

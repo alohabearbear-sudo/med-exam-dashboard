@@ -237,7 +237,8 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 }
             }
 
-            const terms = Object.keys(sm).sort();
+            // 調整這裡：反轉排序方向 (由大到小，最新的年份在最上面)
+            const terms = Object.keys(sm).sort().reverse();
             if (!terms.length) throw new Error('找不到符合編碼格式的有效考題數據。');
 
             // 步驟 2：繪製表頭

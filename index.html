@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>二階醫師國考 - 歷年分數與及格分析看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         body { background-color: #f4f6f9; color: #333; padding: 40px 20px; }
@@ -35,6 +36,10 @@
         .error-message {
             background-color: #fee2e2; border-left: 5px solid #ef4444;
             color: #991b1b; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: none;
+        }
+        .chart-container {
+            background: #ffffff; padding: 20px; border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 30px; display: none;
         }
         .table-container {
             background: #ffffff; border-radius: 12px; overflow: hidden;
@@ -116,6 +121,11 @@
     </div>
 
     <div id="error-box" class="error-message"></div>
+
+    <div class="chart-container" id="chart-container">
+        <canvas id="scoreChart" height="80"></canvas>
+    </div>
+
     <div class="table-container" id="table-container">
         <table id="result-table">
             <thead>
@@ -129,12 +139,12 @@
 
 <script>
 const PASS = 240, PPQ = 1.25;
+let myChartInstance = null; // 全域變數以儲存圖表實例
 
 function fmtTerm(code) {
     return code.substring(0,3) + '年 ' + (code[3]==='1'?'第一次':'第二次');
 }
 
-// 渲染單科成績 (現在傳入的 arr 已經強制對齊全球位階)
 function subjectHtml(arr, isM5) {
     let h = '<div class="tri-cell">';
     for (let i=0;i<3;i++) {
@@ -201,9 +211,11 @@ document.getElementById('file-input').addEventListener('change', function(e) {
 
     const errBox  = document.getElementById('error-box');
     const tblCont = document.getElementById('table-container');
+    const chartCont = document.getElementById('chart-container');
     const tbody   = document.getElementById('table-body');
     errBox.style.display = 'none';
     tblCont.style.display = 'none';
+    chartCont.style.display = 'none';
     tbody.innerHTML = '';
 
     const reader = new FileReader();
@@ -212,7 +224,6 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             const data = JSON.parse(ev.target.result);
 
             const sm = {};
-            // 步驟 1：建立基礎資料結構
             for (let key in data) {
                 if (key === 'metadata' || key.length < 5) continue;
                 const yt  = key.substring(0,4);
@@ -237,11 +248,9 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 }
             }
 
-            // 調整這裡：反轉排序方向 (由大到小，最新的年份在最上面)
-            const terms = Object.keys(sm).sort().reverse();
+            const terms = Object.keys(sm).sort().reverse(); // 表格由新到舊
             if (!terms.length) throw new Error('找不到符合編碼格式的有效考題數據。');
 
-            // 步驟 2：繪製表頭
             const groupRow = document.getElementById('group-row');
             const subRow   = document.getElementById('sub-row');
             groupRow.innerHTML = subRow.innerHTML = '';
@@ -271,11 +280,13 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 subRow.appendChild(st);
             });
 
-            // 步驟 3：繪製資料列 (修正對齊邏輯)
+            // 準備圖表資料陣列
+            let chartLabels = [];
+            let chartData = [];
+
             terms.forEach(term => {
                 const s = sm[term];
                 
-                // 找出該期別下，跨科別「所有」存在過的作答次數索引
                 let allSks = new Set();
                 ['3','4','5','6'].forEach(sub => {
                     if (s[sub]) {
@@ -283,10 +294,8 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                     }
                 });
                 
-                // 由大到小排列 (最新的作答排前面)，並只取前 3 次
                 let sortedSks = Array.from(allSks).sort((a,b) => b - a).slice(0,3);
 
-                // 根據統合後的 sortedSks，強制擷取該科相對應次數的成績。若該科沒考那次，標記 exists: false
                 function getSubjectData(subStr) {
                     return sortedSks.map(sk => {
                         if (s[subStr] && s[subStr][sk] !== undefined) {
@@ -305,15 +314,18 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 const full = [];
                 const clin = [];
 
+                // 取「最新一次」(index 0) 的資料作圖表
+                let latestTotalScore = 0;
+                let hasLatestData = false;
+
                 for (let i = 0; i < sortedSks.length; i++) {
                     let a3 = m3[i], a4 = m4[i], a5 = m5[i], a6 = m6[i];
-                    
-                    // 只要這一「列(作答次數)」有任何一科有考，總分與及格分析就需計算並顯示
                     let anyExists = a3.exists || a4.exists || a5.exists || a6.exists;
 
                     if (anyExists) {
+                        let rowTotalScore = a3.score + a4.score + a5.score + a6.score;
                         full.push({ 
-                            score: a3.score + a4.score + a5.score + a6.score, 
+                            score: rowTotalScore, 
                             count: a3.count + a4.count + a5.count + a6.count,
                             exists: true 
                         });
@@ -322,10 +334,21 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                             count: a3.count + a4.count + a6.count,
                             exists: true 
                         });
+                        
+                        if (i === 0) {
+                            latestTotalScore = rowTotalScore;
+                            hasLatestData = true;
+                        }
                     } else {
                         full.push({ exists: false });
                         clin.push({ exists: false });
                     }
+                }
+
+                // 為了圖表是由舊到新，我們用 unshift 塞入陣列開頭
+                if (hasLatestData) {
+                    chartLabels.unshift(fmtTerm(term));
+                    chartData.unshift(latestTotalScore);
                 }
 
                 const row = document.createElement('tr');
@@ -351,6 +374,65 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 tbody.appendChild(row);
             });
 
+            // 繪製圖表
+            if (myChartInstance) {
+                myChartInstance.destroy();
+            }
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+            myChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: '最新作答總分 (含醫學5)',
+                            data: chartData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#1e3a8a',
+                            pointRadius: 5,
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: '及格線 (240分)',
+                            data: Array(chartLabels.length).fill(PASS),
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + ' 分';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 150, 
+                            max: 300,
+                            title: { display: true, text: '分數' }
+                        },
+                        x: {
+                            title: { display: true, text: '考試期別' }
+                        }
+                    }
+                }
+            });
+
+            chartCont.style.display = 'block';
             tblCont.style.display = 'block';
         } catch(err) {
             console.error(err);

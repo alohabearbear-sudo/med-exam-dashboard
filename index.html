@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>醫師國考二階 - 歷年分數與及格分析看板3</title>
+    <title>醫師國考二階 - 歷年分數與及格分析看板</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         body { background-color: #f4f6f9; color: #333; padding: 40px 20px; }
@@ -34,4 +34,297 @@
         .rules-card li { margin-bottom: 6px; font-size: 14px; color: #475569; }
         .error-message {
             background-color: #fee2e2; border-left: 5px solid #ef4444;
-            color: #991b
+            color: #991b1b; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: none;
+        }
+        .table-container {
+            background: #ffffff; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); display: none; overflow-x: auto;
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 1100px; }
+
+        th.group-header {
+            background-color: #1e40af !important; color: #ffffff !important;
+            font-weight: 700; padding: 10px 8px 6px; font-size: 13px; text-align: center;
+            border-left: 2px solid #3b82f6;
+        }
+        th.group-header:first-child { border-left: none; }
+        th.sub-header {
+            background-color: #1e3a8a !important; color: #93c5fd !important;
+            font-weight: 400; padding: 4px 6px 10px; font-size: 10.5px; text-align: center;
+            border-left: 2px solid #3b82f6; white-space: nowrap;
+        }
+        th.sub-header:first-child { border-left: none; }
+
+        td {
+            padding: 10px 8px; border-bottom: 1px solid #e2e8f0;
+            font-size: 12.5px; text-align: center; vertical-align: top;
+        }
+        td:first-child { text-align: left; padding-left: 14px; }
+        td.gb { border-left: 2px solid #e2e8f0; }
+        tr:hover td { background-color: #f8fafc; }
+
+        .tri-cell { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+        .tri-row { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+        .tri-row .s { font-weight: 600; }
+        .tri-row .c { color: #94a3b8; }
+
+        .tri-row.r0 .s { color: #1e3a8a; font-size: 13px; }
+        .tri-row.r0 .c { font-size: 11px; }
+        .tri-row.r1 .s { color: #475569; font-size: 11.5px; }
+        .tri-row.r1 .c { font-size: 10.5px; }
+        .tri-row.r2 .s { color: #94a3b8; font-size: 10.5px; }
+        .tri-row.r2 .c { font-size: 10px; }
+        .tri-row.na .s { color: #d1d5db; font-size: 11px; }
+
+        .total-cell    { background-color: #f0f9ff !important; }
+        .clinical-cell { background-color: #f0fdf4 !important; }
+
+        .badge { display: inline-block; padding: 3px 9px; border-radius: 50px; font-weight: 600; font-size: 11px; }
+        .badge-success { background-color: #d1fae5; color: #065f46; }
+        .badge-fail    { background-color: #fee2e2; color: #991b1b; }
+
+        .gap-val  { font-weight: bold; color: #ef4444; font-size: 12px; }
+        .gap-sub  { font-size: 10px; color: #b91c1c; font-weight: normal; display: block; }
+        .gap-ok   { color: #059669; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>醫師國考歷年分數與及格分析看板</h1>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析 | <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" style="color:#10b981;font-weight:600;text-decoration:underline;">👉 前往國考傳送門</a></p>
+    </header>
+
+    <div class="upload-card">
+        <div class="upload-btn-wrapper">
+            <button class="btn">選擇並上傳 .json 檔案</button>
+            <input type="file" id="file-input" accept=".json" />
+        </div>
+        <div class="upload-tip">
+            每欄顯示「同一年度期別最近 3 次」練習：<strong style="color:#1e3a8a;">最新</strong>（大字）→ 第二近 → 第三近；未滿 3 次以 <strong>---</strong> 填充。<br>
+            110年第一次與 110年第二次視為<strong>不同期別</strong>，各自獨立計算最近 3 次。
+        </div>
+    </div>
+
+    <div class="rules-card">
+        <h3>📊 計算規則與設定說明</h3>
+        <ul>
+            <li>• 總及格分數線：<strong>240 分</strong>（醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分）</li>
+            <li>• 每題配分：<strong>1.25 分</strong></li>
+            <li>• 「醫5還差幾題？」以<strong>不含醫5的臨床總分</strong>為基準，計算距離 240 分還差幾題醫5</li>
+        </ul>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+    <div class="table-container" id="table-container">
+        <table id="result-table">
+            <thead>
+                <tr id="group-row"></tr>
+                <tr id="sub-row"></tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const PASS = 240, PPQ = 1.25;
+
+function fmtTerm(code) {
+    return code.substring(0,3) + '年 ' + (code[3]==='1'?'第一次':'第二次');
+}
+
+function subjectHtml(arr, isM5) {
+    let h = '<div class="tri-cell">';
+    for (let i=0;i<3;i++) {
+        if (i < arr.length) {
+            const {score,count} = arr[i];
+            const g = (isM5 && i===0 && count>0) ? 'color:#059669;' : '';
+            h += `<div class="tri-row r${i}"><span class="s" style="${g}">${score.toFixed(1)}分</span><span class="c">(${count}題)</span></div>`;
+        } else {
+            h += `<div class="tri-row na"><span class="s">---</span></div>`;
+        }
+    }
+    return h + '</div>';
+}
+
+function totalHtml(arr) {
+    let h = '<div class="tri-cell">';
+    for (let i=0;i<3;i++) {
+        if (i < arr.length) {
+            const {score,count} = arr[i];
+            h += `<div class="tri-row r${i}"><span class="s">${score.toFixed(2)}分</span><span class="c">(${count}題)</span></div>`;
+        } else {
+            h += `<div class="tri-row na"><span class="s">---</span></div>`;
+        }
+    }
+    return h + '</div>';
+}
+
+function passHtml(arr) {
+    const ops=[1,0.6,0.35];
+    let h = '<div class="tri-cell" style="align-items:center;gap:5px;">';
+    for (let i=0;i<3;i++) {
+        if (i < arr.length) {
+            const ok = arr[i].score >= PASS;
+            h += `<span class="badge ${ok?'badge-success':'badge-fail'}" style="opacity:${ops[i]}">${ok?'已過線':'未及格'}</span>`;
+        } else {
+            h += `<span style="color:#d1d5db;font-size:11px;">---</span>`;
+        }
+    }
+    return h + '</div>';
+}
+
+function gapHtml(clinArr) {
+    const ops=[1,0.6,0.35];
+    let h = '<div class="tri-cell" style="align-items:center;gap:5px;">';
+    for (let i=0;i<3;i++) {
+        if (i < clinArr.length) {
+            const needed = Math.max(0, PASS - clinArr[i].score);
+            const needQ  = Math.ceil(needed / PPQ);
+            if (needQ > 0) {
+                h += `<div class="gap-val" style="opacity:${ops[i]}">還差${needQ}題<span class="gap-sub">+${needed.toFixed(2)}分</span></div>`;
+            } else {
+                h += `<div class="gap-ok" style="opacity:${ops[i]}">🎉 已過線</div>`;
+            }
+        } else {
+            h += `<span style="color:#d1d5db;font-size:11px;">---</span>`;
+        }
+    }
+    return h + '</div>';
+}
+
+document.getElementById('file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const errBox  = document.getElementById('error-box');
+    const tblCont = document.getElementById('table-container');
+    const tbody   = document.getElementById('table-body');
+    errBox.style.display = 'none';
+    tblCont.style.display = 'none';
+    tbody.innerHTML = '';
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            const data = JSON.parse(ev.target.result);
+
+            const sm = {};
+            for (let key in data) {
+                if (key === 'metadata' || key.length < 5) continue;
+                const yt  = key.substring(0,4);
+                const sub = key.substring(4,5);
+                if (!['3','4','5','6'].includes(sub)) continue;
+
+                const val = data[key];
+                
+                if (!sm[yt]) sm[yt] = {};
+                if (!sm[yt][sub]) sm[yt][sub] = {};
+
+                // 正確解析陣列 [第一次成績, 第二次成績, 第三次...]
+                if (Array.isArray(val)) {
+                    val.forEach((isOk, attemptIndex) => {
+                        const sk = String(attemptIndex); 
+                        if (!sm[yt][sub][sk]) sm[yt][sub][sk] = 0;
+                        if (isOk === 1) sm[yt][sub][sk] += 1;
+                    });
+                } else {
+                    // 預防資料只有單一數值的狀況
+                    const sk = '0';
+                    if (!sm[yt][sub][sk]) sm[yt][sub][sk] = 0;
+                    if (val === 1) sm[yt][sub][sk] += 1;
+                }
+            }
+
+            function latest3(sessions) {
+                return Object.entries(sessions)
+                    // 依照陣列索引 (0, 1, 2...) 由大到小排序，確保「最新」的作答排在最左邊
+                    .sort((a,b) => Number(b[0]) - Number(a[0]))
+                    .slice(0,3)
+                    .map(([,cnt]) => ({ score: cnt*PPQ, count: cnt }));
+            }
+
+            const terms = Object.keys(sm).sort();
+            if (!terms.length) throw new Error('找不到符合編碼格式的有效考題數據。');
+
+            const groupRow = document.getElementById('group-row');
+            const subRow   = document.getElementById('sub-row');
+            groupRow.innerHTML = subRow.innerHTML = '';
+
+            const cols = [
+                { label:'年度與期別' },
+                { label:'醫學 3' },
+                { label:'醫學 4' },
+                { label:'醫學 5' },
+                { label:'醫學 6' },
+                { label:'總分（含醫5）',  cls:'total-cell' },
+                { label:'總分（不含醫5）', cls:'clinical-cell' },
+                { label:'及格（含醫5）' },
+                { label:'及格（不含醫5）' },
+                { label:'醫5 還差幾題？' },
+            ];
+            cols.forEach((col, i) => {
+                const gt = document.createElement('th');
+                gt.className = 'group-header';
+                gt.textContent = col.label;
+                if (i > 0) gt.style.borderLeft = '2px solid #3b82f6';
+                groupRow.appendChild(gt);
+
+                const st = document.createElement('th');
+                st.className = 'sub-header';
+                st.textContent = i === 0 ? '' : '最新 → 較舊 → 最舊';
+                subRow.appendChild(st);
+            });
+
+            terms.forEach(term => {
+                const s = sm[term];
+                const m3 = s['3'] ? latest3(s['3']) : [];
+                const m4 = s['4'] ? latest3(s['4']) : [];
+                const m5 = s['5'] ? latest3(s['5']) : [];
+                const m6 = s['6'] ? latest3(s['6']) : [];
+
+                const maxN = Math.max(m3.length, m4.length, m5.length, m6.length);
+                const full = [], clin = [];
+                for (let i=0; i<maxN; i++) {
+                    const gFn = (arr,idx) => idx < arr.length ? arr[idx] : {score:0,count:0};
+                    const a3=gFn(m3,i), a4=gFn(m4,i), a5=gFn(m5,i), a6=gFn(m6,i);
+                    full.push({ score: a3.score+a4.score+a5.score+a6.score, count: a3.count+a4.count+a5.count+a6.count });
+                    clin.push({ score: a3.score+a4.score+a6.score,          count: a3.count+a4.count+a6.count });
+                }
+
+                const row = document.createElement('tr');
+                const cells = [
+                    { html: `<strong>${fmtTerm(term)}</strong>`, left: true },
+                    { html: subjectHtml(m3,false) },
+                    { html: subjectHtml(m4,false) },
+                    { html: subjectHtml(m5,true) },
+                    { html: subjectHtml(m6,false) },
+                    { html: totalHtml(full),  extra:'total-cell' },
+                    { html: totalHtml(clin),  extra:'clinical-cell' },
+                    { html: passHtml(full) },
+                    { html: passHtml(clin) },
+                    { html: gapHtml(clin) },
+                ];
+                cells.forEach(({html, left, extra}, i) => {
+                    const td = document.createElement('td');
+                    td.className = (i>0?'gb ':'') + (extra||'');
+                    if (left) td.style.textAlign = 'left';
+                    td.innerHTML = html;
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+
+            tblCont.style.display = 'block';
+        } catch(err) {
+            console.error(err);
+            errBox.textContent = '讀取失敗：' + err.message;
+            errBox.style.display = 'block';
+        }
+    };
+    reader.readAsText(file);
+});
+</script>
+</body>
+</html>

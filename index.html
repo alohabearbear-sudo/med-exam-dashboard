@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>醫師國考二階 - 歷年分數與及格分析看板</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+            display: block !important;
+        }
+        header h1 {
+            color: #1e3a8a;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #64748b;
+            font-size: 15px;
+        }
+
+        .upload-card {
+            background: #ffffff;
+            border: 2px dashed #3b82f6;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+        }
+        .upload-card:hover {
+            border-color: #1d4ed8;
+            background-color: #eff6ff;
+        }
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .btn {
+            border: 2px solid #3b82f6;
+            color: #ffffff;
+            background-color: #3b82f6;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .upload-tip {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .rules-card {
+            background: #ffffff;
+            border-left: 5px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        .rules-card h3 {
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .rules-card ul {
+            list-style-type: none;
+        }
+        .rules-card li {
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #475569;
+        }
+
+        .error-message {
+            background-color: #fee2e2;
+            border-left: 5px solid #ef4444;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .table-container {
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+            display: none;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 1200px;
+        }
+
+        /* === Header groups === */
+        th {
+            background-color: #1e3a8a !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            padding: 12px 8px;
+            font-size: 13px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        th.group-header {
+            background-color: #1e40af !important;
+            font-size: 12px;
+            padding: 8px 6px;
+            border-bottom: 1px solid #3b5fc0;
+        }
+        th:first-child {
+            text-align: left;
+            padding-left: 16px;
+        }
+
+        td {
+            padding: 6px 6px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 12.5px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        td:first-child {
+            text-align: left;
+            padding-left: 16px;
+        }
+        tr:hover td {
+            background-color: #f8fafc !important;
+        }
+
+        /* ── attempt stack cell ── */
+        .attempt-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            align-items: center;
+        }
+        .attempt-row {
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .attempt-row .score {
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+        .attempt-row .qcount {
+            font-size: 10.5px;
+            color: #64748b;
+        }
+        /* newest = slightly more prominent */
+        .attempt-row.newest .score {
+            font-size: 13.5px;
+            color: #0f172a;
+        }
+        .attempt-row.newest .qcount {
+            font-size: 11px;
+        }
+        /* older rows fade a bit */
+        .attempt-row.older {
+            opacity: 0.7;
+        }
+        /* m5 green accent */
+        .attempt-row.m5-present .score {
+            color: #059669;
+        }
+
+        /* total columns */
+        td.total-col {
+            background-color: #f0fdf4;
+        }
+        td.clinical-col {
+            background-color: #eff6ff;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        .badge-success { background-color: #d1fae5; color: #065f46; }
+        .badge-fail    { background-color: #fee2e2; color: #991b1b; }
+
+        .gap-highlight {
+            font-weight: bold;
+            color: #ef4444;
+        }
+        .gap-score {
+            font-size: 10px;
+            color: #b91c1c;
+            display: block;
+            margin-top: 2px;
+            font-weight: normal;
+        }
+
+        /* divider between attempt rows */
+        .attempt-stack .attempt-row + .attempt-row {
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 2px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* year label per attempt */
+        .attempt-row .year-label {
+            font-size: 9.5px;
+            color: #94a3b8;
+            min-width: 52px;
+            text-align: right;
+            margin-right: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>醫師國考歷年分數與及格分析看板</h1>
+        <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析 | <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" style="color: #10b981; font-weight: 600; text-decoration: underline;">👉 前往國考傳送門</a></p>
+    </header>
+
+    <div class="upload-card">
+        <div class="upload-btn-wrapper">
+            <button class="btn">選擇並上傳 .json 檔案</button>
+            <input type="file" id="file-input" accept=".json" />
+        </div>
+        <div class="upload-tip">選取新檔案後，表格將自動套用最新欄位規則並重新計算，無須手動重新整理網頁。</div>
+    </div>
+
+    <div class="rules-card">
+        <h3>📊 計算規則與設定說明</h3>
+        <ul>
+            <li>• 總及格分數線：<strong>240 分</strong> (醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分)</li>
+            <li>• 每題配分：<strong>1.25 分</strong></li>
+            <li>• <strong>顯示優化：</strong>每欄顯示最近 3 次練習紀錄（由新到舊），含年度標籤，方便快速對照進步幅度。</li>
+        </ul>
+    </div>
+
+    <div id="error-box" class="error-message"></div>
+
+    <div class="table-container" id="table-container">
+        <table id="result-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="vertical-align:middle; min-width:110px;">年度與期別<br><span style="font-size:10px;font-weight:400;opacity:0.8;">（最近3次，由新→舊）</span></th>
+                    <th class="group-header">醫學 3</th>
+                    <th class="group-header">醫學 4</th>
+                    <th class="group-header">醫學 5</th>
+                    <th class="group-header">醫學 6</th>
+                    <th class="group-header">總分 (總題數)</th>
+                    <th class="group-header">總分 (總題數)<br>不含醫5</th>
+                    <th class="group-header">及格狀態</th>
+                    <th class="group-header">及格狀態<br>(不含醫5)</th>
+                    <th class="group-header">醫5還差幾題？<br>(需補足分數)</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const PASS_SCORE = 240;
+    const PTS = 1.25;
+
+    function formatYearTerm(code) {
+        if (code.length !== 4) return code;
+        const year = code.substring(0, 3);
+        const term = code.substring(3) === '1' ? '第一次' : '第二次';
+        return `${year}年 ${term}`;
+    }
+
+    // Build an attempt-stack cell: shows up to 3 recent attempts, newest on top
+    // entries: array of {term, score, count, extraClass} sorted newest→oldest
+    function buildAttemptCell(entries, cellClass) {
+        const cell = document.createElement('td');
+        if (cellClass) cell.className = cellClass;
+
+        const stack = document.createElement('div');
+        stack.className = 'attempt-stack';
+
+        entries.forEach((e, i) => {
+            const row = document.createElement('div');
+            let cls = 'attempt-row';
+            if (i === 0) cls += ' newest';
+            else cls += ' older';
+            if (e.extraClass) cls += ' ' + e.extraClass;
+            row.className = cls;
+
+            row.innerHTML =
+                `<span class="year-label">${formatYearTerm(e.term)}</span>` +
+                `<span class="score">${(e.score).toFixed(1)}分</span>` +
+                `<span class="qcount">(${e.count}題)</span>`;
+
+            stack.appendChild(row);
+        });
+
+        cell.appendChild(stack);
+        return cell;
+    }
+
+    document.getElementById('file-input').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        const errorBox = document.getElementById('error-box');
+        const tableContainer = document.getElementById('table-container');
+        const tbody = document.getElementById('table-body');
+
+        errorBox.style.display = 'none';
+        tableContainer.style.display = 'none';
+        tbody.innerHTML = '';
+
+        reader.onload = function (event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                const stats = {};
+
+                for (let key in data) {
+                    if (key === 'metadata' || key.length < 5) continue;
+
+                    const yearTerm = key.substring(0, 4);
+                    const subject = key.substring(4, 5);
+                    const result = data[key];
+                    const isCorrect = Array.isArray(result) ? result[0] : result;
+
+                    if (!stats[yearTerm]) {
+                        stats[yearTerm] = { '3': 0, '4': 0, '5': 0, '6': 0 };
+                    }
+
+                    if (['3', '4', '5', '6'].includes(subject) && isCorrect === 1) {
+                        stats[yearTerm][subject] += 1;
+                    }
+                }
+
+                const sortedTerms = Object.keys(stats).sort();
+
+                if (sortedTerms.length === 0) {
+                    throw new Error('JSON 解析成功，但找不到符合編碼格式的有效考題數據。');
+                }
+
+                // ── For each term, show itself + up to 2 previous attempts in same cell ──
+                sortedTerms.forEach((term, idx) => {
+
+                    // Gather up to 3 terms (current + 2 before), newest first
+                    const window3 = [];
+                    for (let k = idx; k >= Math.max(0, idx - 2); k--) {
+                        window3.push(sortedTerms[k]);
+                    }
+                    // window3[0] = newest (current row), window3[1..2] = older
+
+                    // Build entry arrays per subject and totals
+                    const m3entries = [], m4entries = [], m5entries = [], m6entries = [];
+                    const totalEntries = [], clinicalEntries = [];
+
+                    window3.forEach(t => {
+                        const s = stats[t];
+                        const m3 = s['3'] || 0, m4 = s['4'] || 0;
+                        const m5 = s['5'] || 0, m6 = s['6'] || 0;
+
+                        m3entries.push({ term: t, score: m3 * PTS, count: m3 });
+                        m4entries.push({ term: t, score: m4 * PTS, count: m4 });
+                        m5entries.push({ term: t, score: m5 * PTS, count: m5, extraClass: m5 > 0 ? 'm5-present' : '' });
+                        m6entries.push({ term: t, score: m6 * PTS, count: m6 });
+
+                        const total = m3 + m4 + m5 + m6;
+                        const clinical = m3 + m4 + m6;
+                        totalEntries.push({ term: t, score: total * PTS, count: total });
+                        clinicalEntries.push({ term: t, score: clinical * PTS, count: clinical });
+                    });
+
+                    // Current row data (for pass/gap)
+                    const cur = stats[term];
+                    const cm3 = cur['3'] || 0, cm4 = cur['4'] || 0;
+                    const cm5 = cur['5'] || 0, cm6 = cur['6'] || 0;
+                    const totalCount = cm3 + cm4 + cm5 + cm6;
+                    const currentScore = totalCount * PTS;
+                    const clinicalCount = cm3 + cm4 + cm6;
+                    const clinicalScore = clinicalCount * PTS;
+                    const isPassed = currentScore >= PASS_SCORE;
+                    const isClinicalPassed = clinicalScore >= PASS_SCORE;
+                    const neededScore = Math.max(0, PASS_SCORE - clinicalScore);
+                    const neededQuestions = Math.ceil(neededScore / PTS);
+
+                    // ── Build row ──
+                    const row = document.createElement('tr');
+
+                    // Year label cell
+                    const yearTd = document.createElement('td');
+                    yearTd.innerHTML = `<strong>${formatYearTerm(term)}</strong>`;
+                    row.appendChild(yearTd);
+
+                    // Subject cells
+                    row.appendChild(buildAttemptCell(m3entries, 'sub-col'));
+                    row.appendChild(buildAttemptCell(m4entries, 'sub-col'));
+                    row.appendChild(buildAttemptCell(m5entries, 'sub-col'));
+                    row.appendChild(buildAttemptCell(m6entries, 'sub-col'));
+
+                    // Total cells
+                    row.appendChild(buildAttemptCell(totalEntries, 'total-col'));
+                    row.appendChild(buildAttemptCell(clinicalEntries, 'clinical-col'));
+
+                    // Pass status (based on current row only)
+                    const passTd = document.createElement('td');
+                    passTd.innerHTML = `<span class="badge ${isPassed ? 'badge-success' : 'badge-fail'}">${isPassed ? '已過線' : '未及格'}</span>`;
+                    row.appendChild(passTd);
+
+                    const clinPassTd = document.createElement('td');
+                    clinPassTd.innerHTML = `<span class="badge ${isClinicalPassed ? 'badge-success' : 'badge-fail'}">${isClinicalPassed ? '已過線' : '未及格'}</span>`;
+                    row.appendChild(clinPassTd);
+
+                    // Gap cell
+                    const gapTd = document.createElement('td');
+                    if (neededQuestions > 0) {
+                        gapTd.className = 'gap-highlight';
+                        gapTd.innerHTML = `還差 ${neededQuestions} 題<span class="gap-score">(需補足 ${neededScore.toFixed(2)} 分)</span>`;
+                    } else {
+                        gapTd.innerHTML = '🎉 已過線 (0 題)';
+                    }
+                    row.appendChild(gapTd);
+
+                    tbody.appendChild(row);
+                });
+
+                tableContainer.style.display = 'block';
+
+            } catch (error) {
+                console.error(error);
+                errorBox.textContent = '讀取失敗：' + error.message;
+                errorBox.style.display = 'block';
+            }
+        };
+
+        reader.readAsText(file);
+    });
+</script>
+
+</body>
+</html>

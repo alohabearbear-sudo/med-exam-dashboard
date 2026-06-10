@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>醫師國考二階 - 歷年分數與及格分析看板</title>
+    <title>二階醫師國考 - 歷年分數與及格分析看板</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         body { background-color: #f4f6f9; color: #333; padding: 40px 20px; }
@@ -91,7 +91,7 @@
 <body>
 <div class="container">
     <header>
-        <h1>醫師國考歷年分數與及格分析看板  (created and maintained by KMU BM 陳昶聿) </h1>
+        <h1>二階醫師國考歷年分數與及格分析看板  (created and maintained by KMU BM 陳昶聿) </h1>
         <p>上傳您的答題紀錄 JSON 檔案，即時在本地端進行分科數據與落點分析 | <a href="https://simpsonqoo.github.io/medlic_exam_stage2_simulator/" target="_blank" style="color:#10b981;font-weight:600;text-decoration:underline;">👉 前往國考傳送門</a></p>
     </header>
 
@@ -111,7 +111,7 @@
         <ul>
             <li>• 總及格分數線：<strong>240 分</strong>（醫學 3 ~ 醫學 6 各科 80 題，滿分共 400 分）</li>
             <li>• 每題配分：<strong>1.25 分</strong></li>
-            <li>• 「醫5還差幾題？」以<strong>不含醫學5的臨床總分</strong>為基準，計算距離 240 分還差幾題醫5</li>
+            <li>• 「醫學5還差幾題？」以<strong>不含醫學5的臨床總分</strong>為基準，計算距離 240 分還差幾題醫學5</li>
         </ul>
     </div>
 
@@ -256,7 +256,7 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 { label:'總分（不含醫學5）', cls:'clinical-cell' },
                 { label:'及格（含醫學5）' },
                 { label:'及格（不含醫學5）' },
-                { label:'醫5 還差幾題？' },
+                { label:'醫學5 還差幾題？' },
             ];
             cols.forEach((col, i) => {
                 const gt = document.createElement('th');

@@ -134,10 +134,11 @@ function fmtTerm(code) {
     return code.substring(0,3) + '年 ' + (code[3]==='1'?'第一次':'第二次');
 }
 
+// 渲染單科成績 (現在傳入的 arr 已經強制對齊全球位階)
 function subjectHtml(arr, isM5) {
     let h = '<div class="tri-cell">';
     for (let i=0;i<3;i++) {
-        if (i < arr.length) {
+        if (i < arr.length && arr[i] && arr[i].exists) {
             const {score,count} = arr[i];
             const g = (isM5 && i===0 && count>0) ? 'color:#059669;' : '';
             h += `<div class="tri-row r${i}"><span class="s" style="${g}">${score.toFixed(1)}分</span><span class="c">(${count}題)</span></div>`;
@@ -151,7 +152,7 @@ function subjectHtml(arr, isM5) {
 function totalHtml(arr) {
     let h = '<div class="tri-cell">';
     for (let i=0;i<3;i++) {
-        if (i < arr.length) {
+        if (i < arr.length && arr[i] && arr[i].exists) {
             const {score,count} = arr[i];
             h += `<div class="tri-row r${i}"><span class="s">${score.toFixed(2)}分</span><span class="c">(${count}題)</span></div>`;
         } else {
@@ -165,7 +166,7 @@ function passHtml(arr) {
     const ops=[1,0.6,0.35];
     let h = '<div class="tri-cell" style="align-items:center;gap:5px;">';
     for (let i=0;i<3;i++) {
-        if (i < arr.length) {
+        if (i < arr.length && arr[i] && arr[i].exists) {
             const ok = arr[i].score >= PASS;
             h += `<span class="badge ${ok?'badge-success':'badge-fail'}" style="opacity:${ops[i]}">${ok?'已過線':'未及格'}</span>`;
         } else {
@@ -179,7 +180,7 @@ function gapHtml(clinArr) {
     const ops=[1,0.6,0.35];
     let h = '<div class="tri-cell" style="align-items:center;gap:5px;">';
     for (let i=0;i<3;i++) {
-        if (i < clinArr.length) {
+        if (i < clinArr.length && clinArr[i] && clinArr[i].exists) {
             const needed = Math.max(0, PASS - clinArr[i].score);
             const needQ  = Math.ceil(needed / PPQ);
             if (needQ > 0) {
@@ -211,6 +212,7 @@ document.getElementById('file-input').addEventListener('change', function(e) {
             const data = JSON.parse(ev.target.result);
 
             const sm = {};
+            // 步驟 1：建立基礎資料結構
             for (let key in data) {
                 if (key === 'metadata' || key.length < 5) continue;
                 const yt  = key.substring(0,4);
@@ -222,7 +224,6 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 if (!sm[yt]) sm[yt] = {};
                 if (!sm[yt][sub]) sm[yt][sub] = {};
 
-                // 正確解析陣列 [第一次成績, 第二次成績, 第三次...]
                 if (Array.isArray(val)) {
                     val.forEach((isOk, attemptIndex) => {
                         const sk = String(attemptIndex); 
@@ -230,24 +231,16 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                         if (isOk === 1) sm[yt][sub][sk] += 1;
                     });
                 } else {
-                    // 預防資料只有單一數值的狀況
                     const sk = '0';
                     if (!sm[yt][sub][sk]) sm[yt][sub][sk] = 0;
                     if (val === 1) sm[yt][sub][sk] += 1;
                 }
             }
 
-            function latest3(sessions) {
-                return Object.entries(sessions)
-                    // 依照陣列索引 (0, 1, 2...) 由大到小排序，確保「最新」的作答排在最左邊
-                    .sort((a,b) => Number(b[0]) - Number(a[0]))
-                    .slice(0,3)
-                    .map(([,cnt]) => ({ score: cnt*PPQ, count: cnt }));
-            }
-
             const terms = Object.keys(sm).sort();
             if (!terms.length) throw new Error('找不到符合編碼格式的有效考題數據。');
 
+            // 步驟 2：繪製表頭
             const groupRow = document.getElementById('group-row');
             const subRow   = document.getElementById('sub-row');
             groupRow.innerHTML = subRow.innerHTML = '';
@@ -277,20 +270,61 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                 subRow.appendChild(st);
             });
 
+            // 步驟 3：繪製資料列 (修正對齊邏輯)
             terms.forEach(term => {
                 const s = sm[term];
-                const m3 = s['3'] ? latest3(s['3']) : [];
-                const m4 = s['4'] ? latest3(s['4']) : [];
-                const m5 = s['5'] ? latest3(s['5']) : [];
-                const m6 = s['6'] ? latest3(s['6']) : [];
+                
+                // 找出該期別下，跨科別「所有」存在過的作答次數索引
+                let allSks = new Set();
+                ['3','4','5','6'].forEach(sub => {
+                    if (s[sub]) {
+                        Object.keys(s[sub]).forEach(k => allSks.add(Number(k)));
+                    }
+                });
+                
+                // 由大到小排列 (最新的作答排前面)，並只取前 3 次
+                let sortedSks = Array.from(allSks).sort((a,b) => b - a).slice(0,3);
 
-                const maxN = Math.max(m3.length, m4.length, m5.length, m6.length);
-                const full = [], clin = [];
-                for (let i=0; i<maxN; i++) {
-                    const gFn = (arr,idx) => idx < arr.length ? arr[idx] : {score:0,count:0};
-                    const a3=gFn(m3,i), a4=gFn(m4,i), a5=gFn(m5,i), a6=gFn(m6,i);
-                    full.push({ score: a3.score+a4.score+a5.score+a6.score, count: a3.count+a4.count+a5.count+a6.count });
-                    clin.push({ score: a3.score+a4.score+a6.score,          count: a3.count+a4.count+a6.count });
+                // 根據統合後的 sortedSks，強制擷取該科相對應次數的成績。若該科沒考那次，標記 exists: false
+                function getSubjectData(subStr) {
+                    return sortedSks.map(sk => {
+                        if (s[subStr] && s[subStr][sk] !== undefined) {
+                            let cnt = s[subStr][sk];
+                            return { score: cnt * PPQ, count: cnt, exists: true };
+                        }
+                        return { score: 0, count: 0, exists: false };
+                    });
+                }
+
+                const m3 = getSubjectData('3');
+                const m4 = getSubjectData('4');
+                const m5 = getSubjectData('5');
+                const m6 = getSubjectData('6');
+
+                const full = [];
+                const clin = [];
+
+                for (let i = 0; i < sortedSks.length; i++) {
+                    let a3 = m3[i], a4 = m4[i], a5 = m5[i], a6 = m6[i];
+                    
+                    // 只要這一「列(作答次數)」有任何一科有考，總分與及格分析就需計算並顯示
+                    let anyExists = a3.exists || a4.exists || a5.exists || a6.exists;
+
+                    if (anyExists) {
+                        full.push({ 
+                            score: a3.score + a4.score + a5.score + a6.score, 
+                            count: a3.count + a4.count + a5.count + a6.count,
+                            exists: true 
+                        });
+                        clin.push({ 
+                            score: a3.score + a4.score + a6.score,          
+                            count: a3.count + a4.count + a6.count,
+                            exists: true 
+                        });
+                    } else {
+                        full.push({ exists: false });
+                        clin.push({ exists: false });
+                    }
                 }
 
                 const row = document.createElement('tr');

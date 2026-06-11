@@ -421,8 +421,8 @@ document.getElementById('file-input').addEventListener('change', function(e) {
                     },
                     scales: {
                         y: {
-                            min: 150, 
-                            max: 300,
+                            min: 0,     // 已修改：最低分為 0
+                            max: 400,   // 已修改：最高分為 400
                             title: { display: true, text: '分數' }
                         },
                         x: {
